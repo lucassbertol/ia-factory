@@ -107,11 +107,49 @@ def classificar_intencao(pergunta: str) -> Intencao:
     if contem(["lembrar", "fechamento", "antes de usar", "resumo", "o que devo lembrar"]):
         return Intencao("fechamento", 0.8)
 
-    # Fora de escopo (temas claramente não relacionados ao Factory Method)
-    if contem(["futebol", "receita de bolo", "clima", "politica", "musica"]):
-        return Intencao("fora_de_escopo", 0.6, "tema fora do Factory Method")
+    # Vocabulário do domínio Factory Method (usado para detectar fora de escopo)
+    vocabulario_dominio = [
+        "factory method",
+        "fabrica",
+        "fabrica metodo",
+        "padrao de projeto",
+        "padrão de projeto",
+        "gof",
+        "design pattern",
+        "cria",
+        "criacao",
+        "criação",
+        "instancia",
+        "instância",
+        "objeto",
+        "classe",
+        "produto",
+        "concreto",
+        "abstrato",
+        "criador",
+        "heranca",
+        "herança",
+        "polimorfismo",
+        "encapsulamento",
+        "acoplamento",
+        "simple factory",
+        "abstract factory",
+        "metodo",
+        "método",
+        "method",
+    ]
 
-    # Default: conceito
+    def tem_vocabulario_dominio() -> bool:
+        """Verifica se o texto contém palavras do domínio Factory Method."""
+        return any(termo in p for termo in vocabulario_dominio)
+
+    # Fora de escopo: não contém vocabulário do domínio e não foi
+    # classificado como nenhuma intenção reconhecida acima.
+    if not tem_vocabulario_dominio():
+        return Intencao("fora_de_escopo", 0.7, "sem vocabulário do domínio Factory Method")
+
+    # Default: conceito (apenas se há vocabulário do domínio, mas não
+    # correspondeu a nenhuma intenção específica acima).
     return Intencao("conceito", 0.5, "intenção não identificada com certeza")
 
 
