@@ -1,0 +1,134 @@
+{
+  "total": 18,
+  "aprovados": 18,
+  "reprovados": 0,
+  "percentual": 100.0,
+  "verificacoes": [
+    {
+      "categoria": "Requisitos",
+      "item": "Múltiplos agentes com papéis distintos",
+      "condicao": true,
+      "evidencia": "4 agentes com prompt próprio: tutor, exemplificador, inquiridor, guardiao",
+      "observacao": ""
+    },
+    {
+      "categoria": "Requisitos",
+      "item": "Memória da conversa",
+      "condicao": true,
+      "evidencia": "agente/memoria.py persiste JSON por sessão e injeta contexto",
+      "observacao": ""
+    },
+    {
+      "categoria": "Requisitos",
+      "item": "Lógica pedagógica explícita (5 funções)",
+      "condicao": true,
+      "evidencia": "docs/agentes.md documenta: conceito→exemplo→exercício→diagnóstico→feedback",
+      "observacao": ""
+    },
+    {
+      "categoria": "Requisitos",
+      "item": "Regras anti-alucinação",
+      "condicao": true,
+      "evidencia": "Todos os 4 prompts contêm seção REGRAS ANTI-ALUCINACAO",
+      "observacao": ""
+    },
+    {
+      "categoria": "Requisitos",
+      "item": "Tratamento básico de erros",
+      "condicao": true,
+      "evidencia": "agente/erro.py: ErroEntradaVazia, ErroModeloIndisponivel, ErroSaidaInesperada, etc.",
+      "observacao": ""
+    },
+    {
+      "categoria": "Custo zero",
+      "item": "Proibido API paga / chave de API / nuvem",
+      "condicao": true,
+      "evidencia": "config.py: API_PAGA_PERMITIDA=False; código usa Ollama local apenas",
+      "observacao": ""
+    },
+    {
+      "categoria": "Custo zero",
+      "item": "Modelo local (Ollama qwen2.5:3b)",
+      "condicao": true,
+      "evidencia": "config.py declara OLLAMA_MODEL=qwen2.5:3b; llm.py configura Ollama local",
+      "observacao": ""
+    },
+    {
+      "categoria": "Custo zero",
+      "item": "Declaração de modelo e hardware no mini-relatório",
+      "condicao": true,
+      "evidencia": "docs/mini_relatorio.md Seção 6 declara qwen2.5:3b e 8 GB de RAM",
+      "observacao": ""
+    },
+    {
+      "categoria": "CLI",
+      "item": "Comando único: python -m agente \"pergunta aqui\"",
+      "condicao": true,
+      "evidencia": "agente/__main__.py implementa executar_uma_vez() com sys.argv",
+      "observacao": ""
+    },
+    {
+      "categoria": "CLI",
+      "item": "Modo interativo no terminal (sair para encerrar)",
+      "condicao": true,
+      "evidencia": "agente/__main__.py implementa modo_interativo()",
+      "observacao": ""
+    },
+    {
+      "categoria": "Entregáveis",
+      "item": "1. Sistema multiagente completo em Python",
+      "condicao": true,
+      "evidencia": "15 arquivos .py",
+      "observacao": ""
+    },
+    {
+      "categoria": "Entregáveis",
+      "item": "2. Documentação dos agentes (prompts completos)",
+      "condicao": true,
+      "evidencia": "docs/agentes.md + agente/prompts/*.txt (4 prompts completos)",
+      "observacao": ""
+    },
+    {
+      "categoria": "Entregáveis",
+      "item": "3. Justificativa de design (2-3 páginas)",
+      "condicao": true,
+      "evidencia": "~2.1 páginas (1033 palavras)",
+      "observacao": ""
+    },
+    {
+      "categoria": "Entregáveis",
+      "item": "4. Mini-relatório (1-2 páginas)",
+      "condicao": true,
+      "evidencia": "~2.5 páginas (1245 palavras)",
+      "observacao": ""
+    },
+    {
+      "categoria": "Entregáveis",
+      "item": "5. Demonstração ao vivo (CLI pronta)",
+      "condicao": true,
+      "evidencia": "python -m agente funciona para demonstração",
+      "observacao": ""
+    },
+    {
+      "categoria": "Entregáveis",
+      "item": "6. Caderno de evidências",
+      "condicao": true,
+      "evidencia": "13 arquivos de evidência em evidencias/testes_etapa7/",
+      "observacao": ""
+    },
+    {
+      "categoria": "Uso de IA",
+      "item": "Uso de IA declarado no relatório",
+      "condicao": true,
+      "evidencia": "docs/mini_relatorio.md Seção 5 declara uso de IA generativa",
+      "observacao": ""
+    },
+    {
+      "categoria": "Uso de IA",
+      "item": "Sem chaves de API no código",
+      "condicao": true,
+      "evidencia": "Nenhuma chave de API encontrada no código Python",
+      "observacao": ""
+    }
+  ]
+}
