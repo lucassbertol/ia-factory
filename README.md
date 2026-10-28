@@ -197,7 +197,18 @@ python test_memoria.py
 Valida: múltiplos turnos na mesma sessão, contexto injetado, exercício com continuidade,
 memória não tratada como fato.
 
-### 6.3. Testes funcionais e pedagógicos (Etapa 7)
+### 6.3. Testes de roteamento
+
+```bash
+source .venv/bin/activate
+python test_roteamento.py
+```
+
+Valida: classificação de intenção (conceito, exemplo, exercício, diagnóstico,
+fechamento, fora de escopo, invenção, solução pronta), seleção do agente correto e
+injeção da pergunta/contexto/intenção nas tarefas do CrewAI.
+
+### 6.4. Testes funcionais e pedagógicos (Etapa 7)
 
 ```bash
 source .venv/bin/activate
@@ -250,6 +261,7 @@ ia-factory/
 ├── README.md              # este arquivo
 ├── test_cli.py            # testes da CLI (Etapa 6)
 ├── test_memoria.py        # testes de memória (Etapa 5)
+├── test_roteamento.py     # testes de classificação e seleção de agentes
 └── test_etapa7.py         # testes funcionais e pedagógicos (Etapa 7)
 ```
 

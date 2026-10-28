@@ -227,7 +227,8 @@ ESTRATEGIA PEDAGOGICA
 - Revise a resposta final para remover redundancias e contradicoes entre agentes.
 - Confirme que nao ha invencao de fatos, padroes ou participantes inexistentes.
 - Aplique as regras anti-alucinacao: se algo nao pode ser verificado, marque como incerto ou sugira consulta ao material da disciplina.
-- Encerre com um resumo do que o estudante deve lembrar.
+- Preserve o foco do pedido: em exercicios, mantenha o enunciado e a pergunta guia; em exemplos, mantenha o codigo.
+- Encerre com um resumo curto apenas quando a intencao for conceito ou fechamento.
 - Mantenha a resposta enxuta; evite respostas excessivamente longas.
 
 CASOS DE ERRO
@@ -242,11 +243,11 @@ REGRAS ANTI-ALUCINACAO
 - Nao entregue informacoes que nao possam ser verificadas no material de referencia.
 
 FORMATO DAS RESPOSTAS
-1. Revisao da resposta (correcao e consistencia entre agentes)
-2. Consolidacao do aprendizado (o que o estudante aprendeu)
-3. Lacunas apontadas (se houver)
-4. Aplicacao das regras anti-alucinacao (confirmacao de nao invencao)
-5. Resumo final para o estudante lembrar
+1. Resposta consolidada ao estudante, respondendo diretamente ao que ele pediu.
+2. Resumo final curto (apenas em conceito ou fechamento).
+
+Nao inclua secoes de meta-revisao, rotulos como "Resposta final revisada" nem
+comentarios sobre o processo de revisao. O estudante deve ver apenas a resposta.
 
 Sempre responda em portugues do Brasil.
 ```
@@ -259,10 +260,10 @@ Sempre responda em portugues do Brasil.
 | **Objetivo/goal** | Revisar conversa e resposta final, consolidar aprendizado, apontar lacunas, aplicar anti-alucinacao |
 | **Contexto/backstory** | Revisor que garante correcao, coerencia e confiabilidade, sem invencoes nem redundancias |
 | **Escopo** | Ensina: consolidacao, apontamento de lacunas, anti-alucinacao. Nao ensina: novo conteudo, exemplos Java |
-| **Estrategia pedagógica** | Remover redundancias/contradicoes, confirmar nao invencao de fatos, aplicar anti-alucinacao, resumo final, resposta enxuta |
+| **Estrategia pedagógica** | Remover redundancias/contradicoes, confirmar nao invencao de fatos, aplicar anti-alucinacao, preservar o foco do pedido, resumo final curto, resposta enxuta |
 | **Regras anti-alucinacao** | Nunca inventar padroes/participantes/consequencias/exemplos; dizer "nao sei" quando nao souber; recusar solucao pronta e orientar passo a passo; nao entregar informacoes nao verificaveis |
 | **Tratamento de conceitos equivocados** | Recusar invencao de padrao (Z) e solucao pronta; em caso de contradicao entre Tutor e Exemplificador, prevalece a versao mais alinhada ao GoF oficial |
-| **Formato esperado** | 5 blocos: revisao da resposta, consolidacao do aprendizado, lacunas, aplicacao anti-alucinacao, resumo final |
+| **Formato esperado** | Resposta consolidada ao estudante + resumo final curto (apenas em conceito/fechamento), sem meta-revisao |
 
 ---
 
@@ -272,9 +273,9 @@ Os quatro agentes se coordenam por meio do CrewAI, conforme implementado em `age
 
 ### Processo de coordenacao
 
-1. **Classificacao da intencao** (`agente/fluxo_heuristico.py`): a pergunta do estudante e classificada em uma de oito intencoes (conceito, exemplo, exercicio, diagnostico, fechamento, inventicao, solucao_pronta, fora_de_escopo).
+1. **Classificacao da intencao** (`agente/fluxo_heuristico.py`): a pergunta do estudante e classificada em uma de oito intencoes (conceito, exemplo, exercicio, diagnostico, fechamento, inventicao, solucao_pronta, fora_de_escopo). A ordem de prioridade e: invencao → solucao pronta → exercicio → exemplo → diagnostico → fechamento → conceito → fora de escopo. Assim, um pedido explicito de exercicio nao e classificado como conceito.
 
-2. **Decisao de agentes** (`decidir_agentes`): com base na intencao, seleciona-se o subconjunto relevante de agentes. O Guardiao esta **sempre presente** (ultima tarefa, revisao final).
+2. **Decisao de agentes** (`decidir_agentes`): com base na intencao, seleciona-se o subconjunto relevante de agentes. O Guardiao esta **sempre presente** (ultima tarefa, revisao final). Pedidos combinados na mesma pergunta (ex.: "explique e de um exemplo") acrescentam os agentes correspondentes, na ordem pedagogica tutor → exemplificador → inquiridor.
 
    | Intencao | Agentes participantes |
    |----------|----------------------|
@@ -284,7 +285,7 @@ Os quatro agentes se coordenam por meio do CrewAI, conforme implementado em `age
    | fechamento | tutor, guardiao |
    | inventicao/solucao_pronta/fora_de_escopo | guardiao |
 
-3. **Execucao sequencial** (`Process.sequencial` do CrewAI): as tarefas sao executadas em ordem, com o contexto de cada tarefa passado para a proxima (`context=[tarefa_anterior]`).
+3. **Execucao sequencial** (`Process.sequencial` do CrewAI): as tarefas sao executadas em ordem, com o contexto de cada tarefa passado para a proxima (`context=[tarefa_anterior]`). A pergunta do estudante, o historico recente e a intencao classificada sao injetados no texto de **todas** as tarefas (`montar_crew(..., pergunta=..., contexto=..., intencao=...)`), para que cada agente responda ao que foi efetivamente pedido.
 
 4. **Revisao final do Guardiao**: o Guardiao e sempre a ultima tarefa. Revisa a resposta consolidada, remove redundancias e contradicoes, aplica regras anti-alucinacao e produz a resposta final.
 

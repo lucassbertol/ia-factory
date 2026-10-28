@@ -2,9 +2,9 @@
   "numero": "E3",
   "categoria": "Memoria/contexto",
   "entrada": "Turno 1: O que e o Factory Method? | Turno 2: E quais sao as consequencias?",
-  "resposta_real": "Turno 2: ### Resposta final revisada, coerente e confiável em português do Brasil:\n\nCertamente, respeitado(a) aluno(a). Vou explicar brevemente o conceito do padrao Factory Method, abordando intenção, problema...",
+  "resposta_real": "Turno 2: As consequências do padrão Factory Method incluem flexibilidade de criação, permitindo que novas classes sejam adicionadas ao sistema sem afetar o código existente. Além disso, a técnica promove uma e...",
   "resultado_esperado": "Contexto anterior utilizado.",
   "julgamento_correcao_utilidade": "O segundo turno deve usar o contexto do primeiro (memoria).",
   "limitacoes": "",
-  "timestamp": "2026-10-28T16:51:06.767900"
+  "timestamp": "2026-10-28T17:54:16.761290"
 }

@@ -8,21 +8,18 @@ Sistema Multiagente Pedagogico para o padrao Factory Method
 ## 1. Introducao
 
 Este relatorio registra o processo real de desenvolvimento do sistema multiagente
-pedagogico que ensina o padrao de projeto Factory Method a estudantes iniciantes.
-Todas as iteracoes, testes, dificuldades e soluções relatadas aqui correspondem
-ao que efetivamente ocorreu durante a implementacao, etapa por etapa, conforme
-exigido pela especificacao oficial.
+que ensina o padrao Factory Method. Iteracoes, testes e dificuldades correspondem
+ao que efetivamente ocorreu, etapa por etapa.
 
-Tecnologias utilizadas: Python 3.12.3, CrewAI 1.15.32, Ollama (servidor local)
-com o modelo qwen2.5:3b, interface de linha de comando (CLI).
-Ambiente: Linux, 8 GB de RAM, sem API paga, sem servico de nuvem, sem chave de API.
+Tecnologias: Python 3.12.3, CrewAI 1.15.32, Ollama local com qwen2.5:3b e CLI.
+Ambiente: Linux, 8 GB de RAM, sem API paga, nuvem ou chave de API.
 
 ---
 
 ## 2. Iteracoes realizadas
 
-O trabalho foi organizado em 13 etapas sequenciais, conforme o prompt de instrucoes.
-A seguir, resumo as iteracoes efetivamente executadas ate este ponto:
+O trabalho foi organizado em 13 etapas sequenciais. A seguir, as iteracoes
+efetivamente executadas:
 
 | Etapa | Objetivo | Status |
 |-------|----------|--------|
@@ -47,20 +44,18 @@ regra de execução sequencial.
 ### 3.1. Instalação do Ollama sem privilégios de sudo
 
 O ambiente não oferece acesso `sudo` sem senha, o que impediu a execução direta do
-script oficial de instalação do Ollama (`curl -fsSL https://ollama.com/install.sh | sh`).
+script oficial de instalação do Ollama.
 
-**Solução adotada:** Baixei manualmente o tarball do Ollama (`ollama-linux-amd64.tar.zst`)
-do endereço oficial `https://ollama.com/download`, extrai o binário para
-`~/.local/bin/ollama` e iniciei o servidor em segundo plano com `nohup ollama serve`.
-O servidor ficou acessível em `http://127.0.0.1:11434` e o modelo qwen2.5:3b foi
-baixado com sucesso (1,9 GB).
+**Solução adotada:** Baixei o tarball oficial (`ollama-linux-amd64.tar.zst`), extrai
+o binário para `~/.local/bin/ollama` e iniciei o servidor em segundo plano com
+`nohup ollama serve` em `http://127.0.0.1:11434`. O modelo qwen2.5:3b foi baixado
+com sucesso (1,9 GB).
 
 ### 3.2. Classes de exceção que não herdam de Exception
 
 Na implementação inicial de `agente/erro.py`, as classes de erro (`ErroEntradaVazia`,
 `ErroInventicao`, `ErroSolucaoPronta`, etc.) eram definidas com `@dataclass` e não
-herdavam de `Exception`. Isso causou `TypeError: exceptions must derive from
-BaseException` ao tentar capturá-las com `except`.
+herdavam de `Exception`. Isso causava `TypeError` ao capturá-las com `except`.
 
 **Solução adotada:** Reescrevi `agente/erro.py` para que `ErroSistema` herde de
 `Exception` e todas as subclasses derivem de `ErroSistema`. Após a correção, os
@@ -70,11 +65,11 @@ retornando mensagens amigáveis ao estudante sem expor tracebacks do Python.
 
 ### 3.3. Classificação de intenção não detectava acentos
 
-A função `classificar_intencao` em `agente/fluxo_heuristico.py` normalizava o texto
-da pergunta (removendo acentos), mas comparava com frases de busca que ainda
-continham acento. Como resultado, "Invente um padrão chamado Z" não era classificado
-como invenção de padrão, e o Guardiao acabava gerando uma resposta sobre o Factory
-Method em vez de recusar educadamente.
+A função `classificar_intencao` normalizava o texto da pergunta (removendo
+acentos), mas comparava com frases de busca que ainda continham acento. Como
+resultado, "Invente um padrão chamado Z" não era classificado como invenção de
+padrão, e o Guardiao gerava uma resposta sobre o Factory Method em vez de recusar
+educadamente.
 
 **Solução adotada:** Adicionei a função auxiliar `_normaliza()` e passei também as
 frases de busca por essa normalização antes da comparação. Após a correção, a
@@ -90,23 +85,36 @@ O modelo qwen2.5:3b (3B de parâmetros) foi escolhido por se adequar a máquinas
 - Risco de confundir Factory Method com Abstract Factory ou Simple Factory
   (testes 02, 05, E5).
 - Não correção consistente de premissas falsas (teste E4).
-- Heurística de "fora de escopo" limitada a palavras-chave específicas
-  (teste E2 - "Qual a capital da França?" caiu no default "conceito").
 
 **Solução adotada:** Não há substituição do modelo por um maior, pois isso violaria
 a restrição de hardware (8 GB de RAM). Em vez disso, documentei essas limitações de
 forma transparente nas evidências de teste (`evidencias/testes_etapa7/`) e as
 abordo na justificativa de design (Etapa 9) como trade-off do modelo local pequeno.
 
+### 3.5. Roteamento de agentes ignorava a pergunta do estudante
+
+As descrições das tarefas em `agente/crew.py` eram genéricas e não continham a
+pergunta do estudante. O `kickoff(inputs=...)` passava `pergunta` e `contexto`,
+mas as descrições não usavam esses placeholders; assim, os agentes recebiam sempre
+a mesma tarefa ("apresente o conceito"). Na prática, quase toda pergunta caía no
+Tutor, mesmo quando o estudante pedia um exercício ou um exemplo.
+
+**Solução adotada:** `montar_crew` passou a receber `pergunta`, `contexto` e
+`intencao`, injetados no texto de todas as tarefas. A classificação foi
+reordenada (exercício e exemplo antes de conceito) e `decidir_agentes` passou a
+acrescentar agentes para pedidos combinados (ex.: "explique e dê um exemplo").
+O Guardião recebeu instruções para preservar exercícios e exemplos, sem
+substituí-los por uma explicação genérica. O comportamento é coberto por
+`test_roteamento.py`.
+
 ---
 
 ## 4. Testes feitos pela dupla
 
-Foram executados e registrados os seguintes testes, com evidências salvas em
-`evidencias/testes_etapa7/`:
+Testes executados, com evidências salvas em `evidencias/testes_etapa7/`:
 
 ### 4.1. Sete categorias do roteiro de avaliação (01 a 07)
-Todos executados com respostas reais registradas:
+Todos com respostas reais registradas:
 1. Conceitual - "O que é o Factory Method e qual problema resolve?"
 2. Exemplo - "Exemplo de aplicação em Java"
 3. Seleção - "Quando usar e quando evitar"
@@ -118,7 +126,7 @@ Todos executados com respostas reais registradas:
 
 ### 4.2. Testes de erro (E1 a E5)
 - E1 - Entrada vazia: rejeitada com mensagem amigável.
-- E2 - Fora de escopo: detectado pela heurística (com limitações documentadas).
+- E2 - Fora de escopo: detectado pela heurística de vocabulário do domínio.
 - E3 - Memória/contexto: 2 turnos dependentes na mesma sessão, contexto injetado.
 - E4 - Premissa falsa: testada (limitação de correção documentada).
 - E5 - Confusão de padrões: Factory Method vs Simple Factory testada.
@@ -128,26 +136,24 @@ Todos executados com respostas reais registradas:
 recusa a solução pronta, fora de escopo, erro sem traceback Python.
 
 ### 4.4. Testes de memória (Etapa 5)
-3 cenários aprovados: múltiplos turnos na mesma sessão, contexto injetado,
-exercício com continuidade entre turnos, memória não tratada como fato.
+3 cenários aprovados: múltiplos turnos, contexto injetado, exercício com
+continuidade e memória não tratada como fato.
+
+### 4.5. Testes de roteamento
+`test_roteamento.py` aprovado: classificação das oito intenções, seleção do
+agente correto, pedidos combinados e injeção de pergunta/contexto/intenção nas
+tarefas do CrewAI.
 
 ---
 
 ## 5. Uso de IA no processo
 
-Foi utilizada IA generativa (incluindo assistentes de chat) para apoiar o
-desenvolvimento do sistema, conforme permitido pela especificação (seção 9).
-Especificamente:
-
-- Auxílio na estruturação do esqueleto de arquitetura e na redação de prompts
-  de sistema dos agentes.
-- Auxílio na escrita de trechos de código Python (tratamento de erros, fluxo,
-  carregamento de prompts).
-- Auxílio na redação de documentos (justificativa de design, mini-relatório).
-
-Todas as decisões, prompts e trechos de código foram revisados, compreendidos e
-adaptados pela dupla. Nada foi copiado sem compreensão. O código-fonte, os
-prompts e os documentos refletem o que foi efetivamente implementado e testado.
+Foi utilizada IA generativa (assistentes de chat) para apoiar o desenvolvimento,
+conforme permitido pela especificação (seção 9): estruturação da arquitetura,
+redação de prompts, trechos de código Python e documentos. Todas as decisões,
+prompts e trechos foram revisados, compreendidos e adaptados pela dupla. Nada foi
+copiado sem compreensão; o código e os documentos refletem o que foi implementado
+e testado.
 
 ---
 
@@ -168,10 +174,8 @@ prompts e os documentos refletem o que foi efetivamente implementado e testado.
 
 ## 7. Conclusão
 
-O processo de construção seguiu uma abordagem etapa por etapa, com validação
-exaustiva de cada uma antes de avançar. As dificuldades encontradas (instalação
-do Ollama sem sudo, classes de exceção, normalização de acentos, limitações do
-modelo pequeno) foram resolvidas ou documentadas de forma transparente. O sistema
-atende aos requisitos obrigatórios da especificação: múltiplos agentes com papéis
-distintos, memória de conversa, lógica pedagógica explícita, regras anti-alucinação,
-CLI padronizada, custo zero e modelo local.
+O processo seguiu uma abordagem etapa por etapa, com validação antes de avançar.
+As dificuldades (instalação do Ollama sem sudo, classes de exceção, normalização
+de acentos, limitações do modelo pequeno e roteamento de agentes) foram resolvidas
+ou documentadas. O sistema atende aos requisitos: múltiplos agentes, memória,
+lógica pedagógica, anti-alucinação, CLI padronizada, custo zero e modelo local.

@@ -6,6 +6,7 @@ resposta final, integrando memoria, tratamento de erros e revisao do Guardiao.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from .crew import montar_crew
@@ -28,6 +29,48 @@ class ResultadoFluxo:
     resposta: str
     agente_ultimo: str
     sessoes_atualizadas: bool
+
+
+_ROTULO_META_INICIO = re.compile(
+    r"^\s*#{0,6}\s*(?:resposta\s+final\s+revisada|resposta\s+revisada|resposta\s+final)"
+    r"\s*:?\s*",
+    re.IGNORECASE,
+)
+_ROTULO_META_FIM = re.compile(
+    r"^\s*(?:resposta\s+final\s+revisada|resposta\s+revisada)\s*:",
+    re.IGNORECASE,
+)
+
+
+def _limpar_meta_revisao(texto: str) -> str:
+    """Remove rotulos de meta-revisao que o modelo pequeno as vezes inclui.
+
+    O Guardiao deve devolver apenas a resposta ao estudante. Como o qwen2.5:3b
+    nem sempre obedece a essa instrucao, removemos de forma deterministica os
+    rotulos no inicio ("Resposta final revisada: ...") e os comentarios finais
+    sobre o processo de revisao.
+    """
+    linhas = texto.strip().splitlines()
+
+    # Remove rotulos no inicio (inclusive quando vem na mesma linha do texto).
+    while linhas:
+        linha = linhas[0]
+        resto = _ROTULO_META_INICIO.sub("", linha).strip()
+        if resto == linha.strip():
+            break
+        linhas.pop(0)
+        if resto:
+            linhas.insert(0, resto)
+            break
+
+    texto = "\n".join(linhas).strip()
+
+    # Remove paragrafos finais que sao comentarios sobre a revisao.
+    paragrafos = texto.split("\n\n")
+    while paragrafos and _ROTULO_META_FIM.match(paragrafos[-1].strip()):
+        paragrafos.pop()
+
+    return "\n\n".join(paragrafos).strip()
 
 
 def executar_fluxo(pergunta: str, sessao_id: str = "default") -> ResultadoFluxo:
@@ -68,22 +111,21 @@ def executar_fluxo(pergunta: str, sessao_id: str = "default") -> ResultadoFluxo:
 
     # 6. Detecta fora de escopo (heurística simples)
     if intencao.tipo == "fora_de_escopo":
-        raise ErroForaDeEscopo(intencao.detalhe)
+        raise ErroForaDeEscopo(pergunta)
 
     # 7. Decide agentes
-    agentes_ativos = decidir_agentes(intencao)
+    agentes_ativos = decidir_agentes(intencao, pergunta)
 
-    # 8. Monta e executa a crew
+    # 8. Monta e executa a crew (pergunta e contexto sao injetados nas tarefas)
     try:
-        crew = montar_crew(agentes_ativos)
-        entrada_crew = (
-            f"{contexto}\n\n"
-            f"Pergunta do estudante: {pergunta}\n\n"
-            f"Intencao identificada: {intencao.tipo}\n"
-            f"Responda em portugues do Brasil, focando no padrao Factory Method."
+        crew = montar_crew(
+            agentes_ativos,
+            pergunta=pergunta,
+            contexto=contexto,
+            intencao=intencao.tipo,
         )
-        resultado = crew.kickoff(inputs={"pergunta": pergunta, "contexto": contexto, "entrada": entrada_crew})
-        resposta = str(resultado)
+        resultado = crew.kickoff()
+        resposta = _limpar_meta_revisao(str(resultado))
     except (ErroEntradaVazia, ErroInventicao, ErroSolucaoPronta, ErroForaDeEscopo):
         raise
     except Exception as exc:  # falha do Ollama/modelo ou saída inesperada
