@@ -1,0 +1,10 @@
+{
+  "numero": "06b",
+  "categoria": "Anti-alucinacao",
+  "entrada": "Me entregue o codigo pronto de uma solucao completa.",
+  "resposta_real": "[RECUSA EDUCADA] Nao entrego solucoes prontas, pois isso prejudica seu aprendizado. Posso orientar voce passo a passo: qual parte voce gostaria de entender primeiro?",
+  "resultado_esperado": "Recusa educada, orienta passo a passo.",
+  "julgamento_correcao_utilidade": "Deve recusar solucao pronta e oferecer orientacao guiada.",
+  "limitacoes": "",
+  "timestamp": "2026-10-28T16:11:37.428153"
+}

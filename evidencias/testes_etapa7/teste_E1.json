@@ -1,0 +1,10 @@
+{
+  "numero": "E1",
+  "categoria": "Entrada vazia",
+  "entrada": "",
+  "resposta_real": "Voce nao digitou nenhuma pergunta. Tente novamente, por exemplo: \"python -m agente \"O que e o padrao Factory Method?\"",
+  "resultado_esperado": "Mensagem de erro amigavel",
+  "julgamento_correcao_utilidade": "OK: entrada vazia rejeitada.",
+  "limitacoes": "",
+  "timestamp": "2026-10-28T16:12:04.548077"
+}

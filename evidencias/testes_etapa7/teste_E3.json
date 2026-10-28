@@ -1,0 +1,10 @@
+{
+  "numero": "E3",
+  "categoria": "Memoria/contexto",
+  "entrada": "Turno 1: O que e o Factory Method? | Turno 2: E quais sao as consequencias?",
+  "resposta_real": "Turno 2: **Resposta final revisada, coerente e confiável em português do Brasil:**\n\nO padrao Factory Method é um padrão de arquitetura de software cuja principal intenção é fornecer um mecanismo de manipulação...",
+  "resultado_esperado": "Contexto anterior utilizado.",
+  "julgamento_correcao_utilidade": "O segundo turno deve usar o contexto do primeiro (memoria).",
+  "limitacoes": "",
+  "timestamp": "2026-10-28T16:13:35.970437"
+}
