@@ -1,0 +1,26 @@
+{
+  "comando": [
+    "/tmp/ia-factory-test-venv/bin/python",
+    "-B",
+    "-m",
+    "agente",
+    "--sessao",
+    "../fora",
+    "Factory Method"
+  ],
+  "cwd": "/tmp/ia-cli-7captc77",
+  "entrada_stdin": null,
+  "stdout": "",
+  "stderr": "usage: __main__.py [-h] [--sessao ID] [--limpar-sessao] [pergunta ...]\n__main__.py: error: Sessao invalida: use de 1 a 64 letras, numeros, '_' ou '-'.\n",
+  "codigo_saida": 2,
+  "timeout": false,
+  "duracao_segundos": 2.835,
+  "id": "sessao_invalida",
+  "criterios": {
+    "terminou_no_prazo": true,
+    "codigo_correto": true,
+    "mensagem_esperada": true,
+    "sem_traceback": true
+  },
+  "status": "aprovado"
+}

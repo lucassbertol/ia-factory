@@ -1,0 +1,28 @@
+{
+  "status": "reprovado",
+  "codigo_executado": false,
+  "limite": "Compilacao verifica sintaxe e tipos, nao correcao do padrao.",
+  "blocos_java_integrais": [
+    "// Exemplo para avaliar: ExemploFactoryMethod.java\n\npublic class ExemploFactoryMethod {\n    public static void main(String[] args) {\n        Notificador email = new NotificadorEmail();\n        Notificador sms = new NotificadorSms();\n\n        System.out.println(email.avisar(\"Ana\"));\n        System.out.println(sms.avisar(\"Bia\"));\n    }\n\n    // Interface Notificacao\n    interface Notificacao {\n        String enviar(String destinatario);\n    }\n\n    // Superclasses do Factory Method\n    abstract class Notificador {\n        protected abstract Notificacao criarNotificacao(); // Factory Method\n\n        public String avisar(String destinatario) {\n            Notificacao notificacao = criarNotificacao();\n            return notificacao.enviar(destinatario);\n        }\n    }\n\n    // Concrete Classes\n    class NotificadorEmail extends Notificador {\n        @Override\n        protected Notificacao criarNotificacao() {\n            return new Email();\n        }\n    }\n\n    class NotificadorSms extends Notificador {\n        @Override\n        protected Notificacao criarNotificacao() {\n            return new Sms();\n        }\n    }\n\n    // Concrete Implementations\n    class Email implements Notificacao {\n        @Override\n        public String enviar(String destinatario) {\n            return \"Email para \" + destinatario;\n        }\n    }\n\n    class Sms implements Notificacao {\n        @Override\n        public String enviar(String destinatario) {\n            return \"SMS para \" + destinatario;\n        }\n    }\n}\n\n// Exemplo de utilização correta\npublic class ExemploFactoryMethod {\n    public static void main(String[] args) {\n        Notificador email = new NotificadorEmail();\n        Notificador sms = new NotificadorSms();\n\n        System.out.println(email.avisar(\"Ana\"));\n        System.out.println(sms.avisar(\"Bia\"));\n    }\n}\n"
+  ],
+  "compilacao": {
+    "comando": [
+      "javac",
+      "-proc:none",
+      "-encoding",
+      "UTF-8",
+      "-classpath",
+      "/tmp/ia-javac-opfm8fi3",
+      "-sourcepath",
+      "/tmp/ia-javac-opfm8fi3",
+      "-d",
+      "/tmp/ia-javac-opfm8fi3",
+      "/home/lucas-pc/ia-factory/evidencias/execucoes/20261103T193747Z_d773002e/java_gerado_04/ExemploFactoryMethod.java"
+    ],
+    "codigo_saida": 1,
+    "stdout": "",
+    "stderr": "/home/lucas-pc/ia-factory/evidencias/execucoes/20261103T193747Z_d773002e/java_gerado_04/ExemploFactoryMethod.java:59: error: duplicate class: ExemploFactoryMethod\npublic class ExemploFactoryMethod {\n       ^\n/home/lucas-pc/ia-factory/evidencias/execucoes/20261103T193747Z_d773002e/java_gerado_04/ExemploFactoryMethod.java:5: error: non-static variable this cannot be referenced from a static context\n        Notificador email = new NotificadorEmail();\n                            ^\n/home/lucas-pc/ia-factory/evidencias/execucoes/20261103T193747Z_d773002e/java_gerado_04/ExemploFactoryMethod.java:6: error: non-static variable this cannot be referenced from a static context\n        Notificador sms = new NotificadorSms();\n                          ^\n3 errors\n"
+  },
+  "evidencia_original": "/home/lucas-pc/ia-factory/evidencias/execucoes/20261103T193747Z_d773002e/cenario_04.json",
+  "sha256_evidencia": "33e182720079ea10c74ec3a481654c94f64fbbf7309ee35dd29c6eaf4fa67211"
+}

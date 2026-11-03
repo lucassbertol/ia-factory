@@ -1,0 +1,6 @@
+Using an approximate input token count for model 'qwen2.5:3b': assuming one token per four characters because a native token count is unavailable.
+WARNING:crewai.llms.base_llm:Using an approximate input token count for model 'qwen2.5:3b': assuming one token per four characters because a native token count is unavailable.
+WARNING:crewai.llms.base_llm:Using an approximate input token count for model 'qwen2.5:3b': assuming one token per four characters because a native token count is unavailable.
+WARNING:crewai.llms.base_llm:Using an approximate input token count for model 'qwen2.5:3b': assuming one token per four characters because a native token count is unavailable.
+WARNING:crewai.llms.base_llm:Using an approximate input token count for model 'qwen2.5:3b': assuming one token per four characters because a native token count is unavailable.
+WARNING:crewai.llms.base_llm:Using an approximate input token count for model 'qwen2.5:3b': assuming one token per four characters because a native token count is unavailable.

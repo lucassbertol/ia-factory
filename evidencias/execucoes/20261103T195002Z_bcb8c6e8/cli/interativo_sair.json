@@ -1,0 +1,25 @@
+{
+  "comando": [
+    "/tmp/ia-factory-test-venv/bin/python",
+    "-B",
+    "-m",
+    "agente",
+    "--sessao",
+    "interativo_teste"
+  ],
+  "cwd": "/tmp/ia-cli-bxgambz8",
+  "entrada_stdin": "sair\n",
+  "stdout": "\nSistema pedagógico: padrão Factory Method.\nSessao: interativo_teste\nDigite 'sair' para encerrar.\n\nVocê: Encerrando.\n",
+  "stderr": "",
+  "codigo_saida": 0,
+  "timeout": false,
+  "duracao_segundos": 2.886,
+  "id": "interativo_sair",
+  "criterios": {
+    "terminou_no_prazo": true,
+    "codigo_correto": true,
+    "mensagem_esperada": true,
+    "sem_traceback": true
+  },
+  "status": "aprovado"
+}

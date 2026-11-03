@@ -1,0 +1,32 @@
+{
+  "id": "E2",
+  "categoria": "Fora de escopo",
+  "status": "aprovado",
+  "turnos": [
+    {
+      "contexto_antes": "",
+      "ultima_intencao_antes": "",
+      "exercicio_antes": "",
+      "chamadas_crew": [],
+      "resposta": "Este sistema ensina apenas o padrao Factory Method. 'Qual a melhor receita de bolo?' esta fora do escopo. Consulte o material da disciplina.",
+      "erro": {
+        "tipo": "ErroForaDeEscopo",
+        "mensagem": "Este sistema ensina apenas o padrao Factory Method. 'Qual a melhor receita de bolo?' esta fora do escopo. Consulte o material da disciplina.",
+        "detalhe_tecnico": null
+      },
+      "memoria": [],
+      "exercicio_depois": "",
+      "entrada": "Qual a melhor receita de bolo?",
+      "duracao_segundos": 0.001
+    }
+  ],
+  "criterios_automaticos": [
+    {
+      "criterio": "Rejeitar com ErroForaDeEscopo e mensagem nao vazia; outra excecao reprova.",
+      "turno": 1,
+      "status": "aprovado"
+    }
+  ],
+  "revisao_humana": [],
+  "origem_respostas": "Execucao real do fluxo; nenhuma resposta do modelo foi substituida."
+}

@@ -1,0 +1,26 @@
+{
+  "comando": [
+    "/tmp/ia-factory-test-venv/bin/python",
+    "-B",
+    "-m",
+    "agente",
+    "--sessao",
+    "unica",
+    "Explique Factory Method em duas frases."
+  ],
+  "cwd": "/tmp/ia-cli-7captc77",
+  "entrada_stdin": null,
+  "stdout": "\nSistema (Factory Method):\nFactory Method é um padrão criacional que permite que um componente específico de criação decida de qual concreta instanciar dependendo das circunstâncias. O padrão deixa que a instância concreta do produto seja responsabilidade de subclasses, ajudando a separar a lógica de instância de criação de um criador concreto e aumentando a modularidade e flexibilidade.\n\n",
+  "stderr": "Using an approximate input token count for model 'qwen2.5:3b': assuming one token per four characters because a native token count is unavailable.\nWARNING:crewai.llms.base_llm:Using an approximate input token count for model 'qwen2.5:3b': assuming one token per four characters because a native token count is unavailable.\n",
+  "codigo_saida": 0,
+  "timeout": false,
+  "duracao_segundos": 44.929,
+  "id": "comando_unico",
+  "criterios": {
+    "terminou_no_prazo": true,
+    "codigo_correto": true,
+    "mensagem_esperada": true,
+    "sem_traceback": true
+  },
+  "status": "aprovado"
+}

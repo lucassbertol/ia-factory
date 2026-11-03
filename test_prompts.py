@@ -9,6 +9,7 @@ import importlib.util
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -35,7 +36,37 @@ class PromptsDosAgentesTest(unittest.TestCase):
         for nome, agente in zip(nomes, crew.agents, strict=True):
             with self.subTest(agente=nome):
                 arquivo = Path(__file__).parent / "agente" / "prompts" / f"{nome}.txt"
-                self.assertEqual(agente.backstory, arquivo.read_text(encoding="utf-8"))
+                self.assertTrue(agente.backstory.startswith(arquivo.read_text(encoding="utf-8")))
+
+    def test_referencia_local_chega_a_todos_os_agentes(self):
+        from agente.config import ROOT_DIR
+        referencia = ROOT_DIR / "agente" / "referencias" / "factory_method.md"
+        self.assertTrue(referencia.exists(), "Falta a referencia conceitual local")
+        texto = referencia.read_text(encoding="utf-8")
+        for agente in self.crew.montar_crew().agents:
+            with self.subTest(agente=agente.role):
+                self.assertIn(texto, agente.backstory)
+
+    def test_exemplo_java_fornecido_ao_exemplificador_e_guardiao(self):
+        from agente.config import ROOT_DIR
+        caminho = ROOT_DIR / "agente" / "referencias" / "ExemploFactoryMethod.java"
+        self.assertTrue(caminho.exists(), "Falta o exemplo Java de referencia")
+        codigo = caminho.read_text(encoding="utf-8")
+        crew = self.crew.montar_crew(["exemplificador", "guardiao"], intencao="exemplo")
+        for tarefa in crew.tasks:
+            self.assertIn(codigo, tarefa.description)
+
+    def test_exercicio_nao_recebe_codigo_do_exemplo(self):
+        crew = self.crew.montar_crew(["inquiridor", "guardiao"], intencao="exercicio")
+        for tarefa in crew.tasks:
+            self.assertNotIn("public class ExemploFactoryMethod", tarefa.description)
+
+    def test_referencia_vazia_impede_agentes_sem_base_factual(self):
+        with tempfile.TemporaryDirectory() as pasta:
+            (Path(pasta) / "factory_method.md").write_text(" \n", encoding="utf-8")
+            with patch.dict(self.crew.carregar_referencia.__globals__, {"REFERENCIAS_DIR": Path(pasta)}):
+                with self.assertRaises(ValueError):
+                    self.crew.montar_crew(["tutor", "guardiao"])
 
     def test_prompt_ausente_interrompe_montagem(self):
         with patch.dict(

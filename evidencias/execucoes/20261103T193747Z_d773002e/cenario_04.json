@@ -1,0 +1,66 @@
+{
+  "id": "04",
+  "categoria": "Uso incorreto",
+  "status": "pendente_revisao",
+  "turnos": [
+    {
+      "contexto_antes": "",
+      "ultima_intencao_antes": "",
+      "exercicio_antes": "",
+      "chamadas_crew": [
+        {
+          "agentes": [
+            "tutor",
+            "exemplificador",
+            "inquiridor",
+            "guardiao"
+          ],
+          "pergunta": "Como o Factory Method costuma ser aplicado de forma errada? Dê um exemplo de uso equivocado e explique como corrigir.",
+          "contexto": "",
+          "intencao": "exemplo"
+        }
+      ],
+      "resposta": "Existe um problema claro com essa implementação. Em vez de usar a Factory Method, o código acima está tentando instanciar diretamente `Email` e `Sms` utilizando o operador `new`. Isso é inapropriado para o conceito do Factory Method, visto que a responsabilidade de criar os objetos `Email` e `Sms` deveria estar encapsulada na classe `Notificador` que é o fabricante (ou criador). O Factory Method espera que o criador (especificado por `Notificador.criarNotificacao()`) gere instâncias do `Notificacao` (que é a interface base para `Email` e `Sms`).\n\nPara corrigir essa implementação, você deve editar o código para retornar instâncias da interface `Notificacao` e não instâncias das classes `Email` e `Sms` diretamente. Aqui está um exemplo de como você pode fazer isso:\n\n```java\n// Exemplo para avaliar: ExemploFactoryMethod.java\n\npublic class ExemploFactoryMethod {\n    public static void main(String[] args) {\n        Notificador email = new NotificadorEmail();\n        Notificador sms = new NotificadorSms();\n\n        System.out.println(email.avisar(\"Ana\"));\n        System.out.println(sms.avisar(\"Bia\"));\n    }\n\n    // Interface Notificacao\n    interface Notificacao {\n        String enviar(String destinatario);\n    }\n\n    // Superclasses do Factory Method\n    abstract class Notificador {\n        protected abstract Notificacao criarNotificacao(); // Factory Method\n\n        public String avisar(String destinatario) {\n            Notificacao notificacao = criarNotificacao();\n            return notificacao.enviar(destinatario);\n        }\n    }\n\n    // Concrete Classes\n    class NotificadorEmail extends Notificador {\n        @Override\n        protected Notificacao criarNotificacao() {\n            return new Email();\n        }\n    }\n\n    class NotificadorSms extends Notificador {\n        @Override\n        protected Notificacao criarNotificacao() {\n            return new Sms();\n        }\n    }\n\n    // Concrete Implementations\n    class Email implements Notificacao {\n        @Override\n        public String enviar(String destinatario) {\n            return \"Email para \" + destinatario;\n        }\n    }\n\n    class Sms implements Notificacao {\n        @Override\n        public String enviar(String destinatario) {\n            return \"SMS para \" + destinatario;\n        }\n    }\n}\n\n// Exemplo de utilização correta\npublic class ExemploFactoryMethod {\n    public static void main(String[] args) {\n        Notificador email = new NotificadorEmail();\n        Notificador sms = new NotificadorSms();\n\n        System.out.println(email.avisar(\"Ana\"));\n        System.out.println(sms.avisar(\"Bia\"));\n    }\n}\n```\n\nNesta versão corrigida, a classe `Notificador`, que assume a responsabilidade de ser o `Factory`, está sobrescrito nas subclasses `NotificadorEmail` e `NotificadorSms` para criar instâncias de `Email` e `Sms`, que implementam a interface `Notificacao`. Essa implementação segue o conceito do Factory Method de forma adequada, permitindo que a classe `Notificador` delegue a responsabilidade de criar objetos para as subclasses de `Notificador`, tornando o código mais modular e forte.",
+      "erro": null,
+      "memoria": [
+        {
+          "timestamp": "2026-11-03T16:43:39.298975",
+          "pergunta": "Como o Factory Method costuma ser aplicado de forma errada? Dê um exemplo de uso equivocado e explique como corrigir.",
+          "resposta": "Existe um problema claro com essa implementação. Em vez de usar a Factory Method, o código acima está tentando instanciar diretamente `Email` e `Sms` utilizando o operador `new`. Isso é inapropriado para o conceito do Factory Method, visto que a responsabilidade de criar os objetos `Email` e `Sms` deveria estar encapsulada na classe `Notificador` que é o fabricante (ou criador). O Factory Method espera que o criador (especificado por `Notificador.criarNotificacao()`) gere instâncias do `Notificacao` (que é a interface base para `Email` e `Sms`).\n\nPara corrigir essa implementação, você deve editar o código para retornar instâncias da interface `Notificacao` e não instâncias das classes `Email` e `Sms` diretamente. Aqui está um exemplo de como você pode fazer isso:\n\n```java\n// Exemplo para avaliar: ExemploFactoryMethod.java\n\npublic class ExemploFactoryMethod {\n    public static void main(String[] args) {\n        Notificador email = new NotificadorEmail();\n        Notificador sms = new NotificadorSms();\n\n        System.out.println(email.avisar(\"Ana\"));\n        System.out.println(sms.avisar(\"Bia\"));\n    }\n\n    // Interface Notificacao\n    interface Notificacao {\n        String enviar(String destinatario);\n    }\n\n    // Superclasses do Factory Method\n    abstract class Notificador {\n        protected abstract Notificacao criarNotificacao(); // Factory Method\n\n        public String avisar(String destinatario) {\n            Notificacao notificacao = criarNotificacao();\n            return notificacao.enviar(destinatario);\n        }\n    }\n\n    // Concrete Classes\n    class NotificadorEmail extends Notificador {\n        @Override\n        protected Notificacao criarNotificacao() {\n            return new Email();\n        }\n    }\n\n    class NotificadorSms extends Notificador {\n        @Override\n        protected Notificacao criarNotificacao() {\n            return new Sms();\n        }\n    }\n\n    // Concrete Implementations\n    class Email implements Notificacao {\n        @Override\n        public String enviar(String destinatario) {\n            return \"Email para \" + destinatario;\n        }\n    }\n\n    class Sms implements Notificacao {\n        @Override\n        public String enviar(String destinatario) {\n            return \"SMS para \" + destinatario;\n        }\n    }\n}\n\n// Exemplo de utilização correta\npublic class ExemploFactoryMethod {\n    public static void main(String[] args) {\n        Notificador email = new NotificadorEmail();\n        Notificador sms = new NotificadorSms();\n\n        System.out.println(email.avisar(\"Ana\"));\n        System.out.println(sms.avisar(\"Bia\"));\n    }\n}\n```\n\nNesta versão corrigida, a classe `Notificador`, que assume a responsabilidade de ser o `Factory`, está sobrescrito nas subclasses `NotificadorEmail` e `NotificadorSms` para criar instâncias de `Email` e `Sms`, que implementam a interface `Notificacao`. Essa implementação segue o conceito do Factory Method de forma adequada, permitindo que a classe `Notificador` delegue a responsabilidade de criar objetos para as subclasses de `Notificador`, tornando o código mais modular e forte.",
+          "agente": "guardiao",
+          "intencao": "exemplo",
+          "exercicio_pendente": ""
+        }
+      ],
+      "exercicio_depois": "",
+      "entrada": "Como o Factory Method costuma ser aplicado de forma errada? Dê um exemplo de uso equivocado e explique como corrigir.",
+      "duracao_segundos": 108.581
+    }
+  ],
+  "criterios_automaticos": [
+    {
+      "criterio": "Concluir o turno sem excecao e com resposta textual nao vazia.",
+      "turno": 1,
+      "status": "aprovado"
+    }
+  ],
+  "revisao_humana": [
+    {
+      "id": "H1",
+      "criterio": "Mostra um erro concreto de aplicacao ou de classificacao e explica uma correcao coerente.",
+      "status": "pendente",
+      "julgamento": null,
+      "trecho_evidencia": null,
+      "avaliador": null
+    },
+    {
+      "id": "H2",
+      "criterio": "Nao condena toda fabrica simples ou todo if/switch como erro por si so.",
+      "status": "pendente",
+      "julgamento": null,
+      "trecho_evidencia": null,
+      "avaliador": null
+    }
+  ],
+  "origem_respostas": "Execucao real do fluxo; nenhuma resposta do modelo foi substituida."
+}

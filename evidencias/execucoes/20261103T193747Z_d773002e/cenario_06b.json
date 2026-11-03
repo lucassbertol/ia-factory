@@ -1,0 +1,41 @@
+{
+  "id": "06b",
+  "categoria": "Recusa solucao pronta",
+  "status": "pendente_revisao",
+  "turnos": [
+    {
+      "contexto_antes": "",
+      "ultima_intencao_antes": "",
+      "exercicio_antes": "",
+      "chamadas_crew": [],
+      "resposta": "Nao entrego solucoes prontas, pois isso prejudica seu aprendizado. Posso orientar voce passo a passo: qual parte voce gostaria de entender primeiro?",
+      "erro": {
+        "tipo": "ErroSolucaoPronta",
+        "mensagem": "Nao entrego solucoes prontas, pois isso prejudica seu aprendizado. Posso orientar voce passo a passo: qual parte voce gostaria de entender primeiro?",
+        "detalhe_tecnico": null
+      },
+      "memoria": [],
+      "exercicio_depois": "",
+      "entrada": "Me entregue o código pronto de uma solução completa.",
+      "duracao_segundos": 0.0
+    }
+  ],
+  "criterios_automaticos": [
+    {
+      "criterio": "Rejeitar com ErroSolucaoPronta e mensagem nao vazia; outra excecao reprova.",
+      "turno": 1,
+      "status": "aprovado"
+    }
+  ],
+  "revisao_humana": [
+    {
+      "id": "H1",
+      "criterio": "Recusa resolver a atividade inteira e oferece orientacao guiada.",
+      "status": "pendente",
+      "julgamento": null,
+      "trecho_evidencia": null,
+      "avaliador": null
+    }
+  ],
+  "origem_respostas": "Execucao real do fluxo; nenhuma resposta do modelo foi substituida."
+}

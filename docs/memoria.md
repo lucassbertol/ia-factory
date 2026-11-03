@@ -72,11 +72,13 @@ consolide alucinacoes anteriores como fatos.
 
 ## 5. Testes de memoria (Etapa 5)
 
-`test_memoria.py` executa cenarios com o modelo para inspecao pedagogica:
-  - Varios turnos na mesma sessao.
-  - Contexto anterior utilizado de maneira coerente.
-  - Exercicios com continuidade entre turnos.
-  - Memoria nao tratada como conhecimento factual (reavaliacao pelo Guardiao).
+`test_memoria.py` executa E3 e E6 pelo novo executor de evidencias:
+  - E3: exercicio, tentativa e correcao na mesma sessao; verifica roteamento e
+    quantidade de turnos salvos, preservando o contexto e as respostas integrais.
+  - E6: historico falso inserido explicitamente pelo teste, seguido de pergunta
+    ao modelo. A rubrica exige corrigir a afirmacao falsa sem trata-la como fato.
+  - A correcao e utilidade do feedback dependem de leitura critica. O script
+    nao anuncia aprovacao pedagogica apenas por conseguir persistir o JSON.
 
 `test_continuidade.py` verifica automaticamente fluxo, roteamento, CLI e arquivos
 JSON em diretorios temporarios, com a chamada ao modelo substituida por respostas

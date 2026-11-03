@@ -1,0 +1,19 @@
+{
+  "id": "cenario_E3_processo",
+  "comando": [
+    "/tmp/ia-factory-test-venv/bin/python",
+    "-B",
+    "/home/lucas-pc/ia-factory/executar_testes.py",
+    "--worker",
+    "E3",
+    "--diretorio",
+    "/home/lucas-pc/ia-factory/evidencias/execucoes/20261103T193747Z_d773002e"
+  ],
+  "cwd": "/home/lucas-pc/ia-factory",
+  "timeout_segundos": 1080,
+  "codigo_saida": 2,
+  "status": "reprovado",
+  "duracao_segundos": 81.243,
+  "stdout": "cenario_E3_processo.stdout.txt",
+  "stderr": "cenario_E3_processo.stderr.txt"
+}

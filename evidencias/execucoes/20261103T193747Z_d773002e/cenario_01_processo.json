@@ -1,0 +1,19 @@
+{
+  "id": "cenario_01_processo",
+  "comando": [
+    "/tmp/ia-factory-test-venv/bin/python",
+    "-B",
+    "/home/lucas-pc/ia-factory/executar_testes.py",
+    "--worker",
+    "01",
+    "--diretorio",
+    "/home/lucas-pc/ia-factory/evidencias/execucoes/20261103T193747Z_d773002e"
+  ],
+  "cwd": "/home/lucas-pc/ia-factory",
+  "timeout_segundos": 360,
+  "codigo_saida": 2,
+  "status": "reprovado",
+  "duracao_segundos": 44.73,
+  "stdout": "cenario_01_processo.stdout.txt",
+  "stderr": "cenario_01_processo.stderr.txt"
+}

@@ -19,6 +19,7 @@ from .agentes import Tutor, Exemplificador, Inquiridor, Guardiao
 from .config import PADRAO_ENSINADO
 from .llm import obter_llm
 from .prompts import carregar_prompt
+from .conhecimento import carregar_referencia, carregar_exemplos_java
 
 
 def _criar_agent(nome: str, agente_instancia) -> Agent:
@@ -32,7 +33,7 @@ def _criar_agent(nome: str, agente_instancia) -> Agent:
     return Agent(
         role=definicao.role,
         goal=definicao.goal,
-        backstory=prompt,
+        backstory=prompt + "\n\n" + carregar_referencia(),
         llm=obter_llm(),
         verbose=False,
         allow_delegation=False,
@@ -90,6 +91,22 @@ def montar_crew(
         else ""
     )
 
+    # Somente tarefas de exemplo recebem codigo: nao antecipar uma solucao
+    # durante a pratica socratica. O Guardiao recebe a mesma fonte para revisar.
+    exemplos_java = (
+        carregar_exemplos_java()
+        if "exemplificador" in agents_crewai and intencao not in {"exercicio", "avaliacao"}
+        else ""
+    )
+    bloco_exemplos = (
+        "\n\nExemplos didaticos locais para consulta (nao sao solucao da tarefa "
+        "do estudante). Prefira o exemplo Factory Method para exemplificar; "
+        "o Simple Factory serve somente para contraste. Explique participantes "
+        "e limites. Adaptacoes novas nao foram compiladas por este chat.\n\n"
+        + exemplos_java
+        if exemplos_java else ""
+    )
+
     # Orientacao especifica para a intencao, usada pelo Inquiridor e pelo Guardiao
     orientacao_inquiridor = {
         "avaliacao": (
@@ -132,8 +149,9 @@ def montar_crew(
         ),
         "exemplo": (
             "O estudante pediu um EXEMPLO: preserve o codigo Java e a explicacao "
-            "produzidos pelo Exemplificador. NAO remova o codigo nem substitua "
-            "por uma explicacao generica.\n\n"
+            "produzidos pelo Exemplificador, corrigindo inconsistencias com a "
+            "referencia local. NAO substitua o exemplo por uma explicacao "
+            "generica e nao preserve codigo incorreto so por ter sido gerado.\n\n"
         ),
     }.get(intencao, "")
 
@@ -185,6 +203,7 @@ def montar_crew(
                 "correto e idiomatico em Java do padrao Factory Method, "
                 "explicando por que funciona e adaptando ao nivel do estudante. "
                 "Use o prompt do exemplificador como referencia."
+                f"{bloco_exemplos}"
             ),
             expected_output="Exemplo em Java com explicacao, em portugues do Brasil.",
             agent=agents_crewai["exemplificador"],
@@ -235,6 +254,7 @@ def montar_crew(
                 "'Resposta final revisada' e nao explique o que voce fez. "
                 "Use o prompt do guardiao como referencia.\n\n"
                 f"{orientacao_guardiao}"
+                f"{bloco_exemplos}"
             ),
             expected_output="Resposta consolidada ao estudante, sem meta-comentarios, em portugues do Brasil.",
             agent=agents_crewai["guardiao"],

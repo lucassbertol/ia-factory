@@ -1,0 +1,16 @@
+{
+  "id": "dependencias",
+  "comando": [
+    "/tmp/ia-factory-test-venv/bin/python",
+    "-m",
+    "pip",
+    "freeze"
+  ],
+  "cwd": "/home/lucas-pc/ia-factory",
+  "timeout_segundos": 120,
+  "codigo_saida": 0,
+  "status": "aprovado",
+  "duracao_segundos": 0.465,
+  "stdout": "dependencias.stdout.txt",
+  "stderr": "dependencias.stderr.txt"
+}

@@ -31,9 +31,10 @@ class AgenteDefinicao:
 
 # Regra anti-alucinacao compartilhada (mesma para todos os agentes)
 REGRAS_ANTI_ALUCINACAO = (
-    "Nunca invente padroes, participantes, consequencias ou exemplos. "
+    "Confira a referencia local; nao invente fatos ou participantes. "
+    "Identifique exemplos didaticos autorais como hipoteticos. "
     "Quando nao souber algo, diga claramente 'nao sei' e sugira a consulta "
-    "ao material da disciplina. Nao entregue codigo completo pronto para copiar-e-colar; "
+    "ao material da disciplina. Nao resolva a atividade inteira do estudante; "
     "oriente o estudante passo a passo."
 )
 

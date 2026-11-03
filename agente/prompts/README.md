@@ -18,3 +18,10 @@ Cada prompt segue o esqueleto do Anexo B da especificacao oficial:
   EXEMPLOS / CASOS DE ERRO / REGRAS ANTI-ALUCINACAO / FORMATO DAS RESPOSTAS
 
 Conteudo implementado na Etapa 3.
+
+Apos cada prompt, `crew.py` anexa a referencia local de
+`agente/referencias/factory_method.md`, carregada por `agente/conhecimento.py`.
+Nas tarefas de exemplo, Exemplificador e Guardiao recebem tambem os exemplos
+Java locais. Nao ha consultas de rede nem compilacao de codigo do estudante
+durante a conversa. Consulte `docs/revisao_conceitual.md` para a revisao e seus
+limites. Alteracoes nos `.txt` devem ser refletidas em `docs/agentes.md`.

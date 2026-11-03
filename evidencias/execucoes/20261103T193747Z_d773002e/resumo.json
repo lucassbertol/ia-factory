@@ -1,0 +1,146 @@
+{
+  "resultados": [
+    {
+      "id": "unitarios",
+      "comando": [
+        "/tmp/ia-factory-test-venv/bin/python",
+        "-B",
+        "-m",
+        "unittest",
+        "-v",
+        "test_avaliacao",
+        "test_prompts",
+        "test_continuidade",
+        "test_exemplos_java"
+      ],
+      "cwd": "/home/lucas-pc/ia-factory",
+      "timeout_segundos": 120,
+      "codigo_saida": 0,
+      "status": "aprovado",
+      "duracao_segundos": 2.021,
+      "stdout": "unitarios.stdout.txt",
+      "stderr": "unitarios.stderr.txt"
+    },
+    {
+      "id": "roteamento",
+      "comando": [
+        "/tmp/ia-factory-test-venv/bin/python",
+        "-B",
+        "test_roteamento.py"
+      ],
+      "cwd": "/home/lucas-pc/ia-factory",
+      "timeout_segundos": 120,
+      "codigo_saida": 0,
+      "status": "aprovado",
+      "duracao_segundos": 3.571,
+      "stdout": "roteamento.stdout.txt",
+      "stderr": "roteamento.stderr.txt"
+    },
+    {
+      "id": "cli",
+      "comando": [
+        "/tmp/ia-factory-test-venv/bin/python",
+        "-B",
+        "test_cli.py",
+        "--saida",
+        "/home/lucas-pc/ia-factory/evidencias/execucoes/20261103T193747Z_d773002e/cli"
+      ],
+      "cwd": "/home/lucas-pc/ia-factory",
+      "timeout_segundos": 1080,
+      "codigo_saida": 0,
+      "status": "aprovado",
+      "duracao_segundos": 69.692,
+      "stdout": "cli.stdout.txt",
+      "stderr": "cli.stderr.txt"
+    },
+    {
+      "id": "01",
+      "status": "pendente_revisao",
+      "evidencia": "cenario_01.json",
+      "processo": "cenario_01_processo.json"
+    },
+    {
+      "id": "02",
+      "status": "pendente_revisao",
+      "evidencia": "cenario_02.json",
+      "processo": "cenario_02_processo.json"
+    },
+    {
+      "id": "03",
+      "status": "pendente_revisao",
+      "evidencia": "cenario_03.json",
+      "processo": "cenario_03_processo.json"
+    },
+    {
+      "id": "04",
+      "status": "pendente_revisao",
+      "evidencia": "cenario_04.json",
+      "processo": "cenario_04_processo.json"
+    },
+    {
+      "id": "05",
+      "status": "pendente_revisao",
+      "evidencia": "cenario_05.json",
+      "processo": "cenario_05_processo.json"
+    },
+    {
+      "id": "06a",
+      "status": "pendente_revisao",
+      "evidencia": "cenario_06a.json",
+      "processo": "cenario_06a_processo.json"
+    },
+    {
+      "id": "06b",
+      "status": "pendente_revisao",
+      "evidencia": "cenario_06b.json",
+      "processo": "cenario_06b_processo.json"
+    },
+    {
+      "id": "07",
+      "status": "pendente_revisao",
+      "evidencia": "cenario_07.json",
+      "processo": "cenario_07_processo.json"
+    },
+    {
+      "id": "E1",
+      "status": "aprovado",
+      "evidencia": "cenario_E1.json",
+      "processo": "cenario_E1_processo.json"
+    },
+    {
+      "id": "E2",
+      "status": "aprovado",
+      "evidencia": "cenario_E2.json",
+      "processo": "cenario_E2_processo.json"
+    },
+    {
+      "id": "E3",
+      "status": "pendente_revisao",
+      "evidencia": "cenario_E3.json",
+      "processo": "cenario_E3_processo.json"
+    },
+    {
+      "id": "E4",
+      "status": "pendente_revisao",
+      "evidencia": "cenario_E4.json",
+      "processo": "cenario_E4_processo.json"
+    },
+    {
+      "id": "E5",
+      "status": "pendente_revisao",
+      "evidencia": "cenario_E5.json",
+      "processo": "cenario_E5_processo.json"
+    },
+    {
+      "id": "E6",
+      "status": "pendente_revisao",
+      "evidencia": "cenario_E6.json",
+      "processo": "cenario_E6_processo.json"
+    }
+  ],
+  "contagens": {
+    "aprovado": 5,
+    "pendente_revisao": 12
+  },
+  "codigo_saida": 2
+}

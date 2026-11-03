@@ -20,8 +20,14 @@ O sistema é composto por quatro agentes com papéis distintos, coordenados pelo
 | **Guardião e revisor** | Revisor de confiabilidade | Revisão final, anti-alucinação, consolidação do aprendizado |
 
 O Guardião é sempre a última tarefa e aplica as regras anti-alucinação antes de entregar a
-resposta ao estudante: nunca inventa padrões, participantes, consequências ou exemplos;
-diz "não sei" quando não sabe; recusa soluções prontas e orienta passo a passo.
+resposta ao estudante. Todos os agentes recebem uma referencia conceitual local,
+com regras para corrigir premissas falsas, reconhecer incerteza e recusar solucoes
+completas da atividade. Exemplos didaticos pequenos e explicados sao permitidos.
+Essas instrucoes reduzem riscos, mas nao garantem a correcao de toda resposta do modelo.
+
+A [revisao conceitual](docs/revisao_conceitual.md) registra os erros das evidencias
+anteriores, as correcoes e a validacao dos dois exemplos Java autorais. A referencia
+e os exemplos sao lidos de arquivos locais, sem consultas a internet na execucao.
 
 ---
 
@@ -205,6 +211,20 @@ python -m agente "O que devo lembrar antes de usar o Factory Method?"
 
 ## 6. Testes
 
+O comando recomendado registra os criterios, logs e resultados completos:
+
+```bash
+python executar_testes.py --modo local
+python executar_testes.py --modo completo
+```
+
+O modo completo requer Ollama e o modelo local ativos. Cada execucao cria uma
+pasta em `evidencias/execucoes/`, preservando as anteriores. Veja o
+[protocolo de testes e evidencias](docs/testes_e_evidencias.md).
+Codigo 0 indica aprovacao das verificacoes selecionadas; 1 indica reprovacao;
+2 indica bloqueio ou revisao pedagogica pendente. Nao se mede conformidade
+com o PDF apenas por existencia de arquivos ou palavras-chave.
+
 ### 6.1. Testes da CLI (interface obrigatória)
 
 ```bash
@@ -212,8 +232,10 @@ source .venv/bin/activate
 python test_cli.py
 ```
 
-Valida: comando único, término, entrada vazia, recusa a invenção de padrão, recusa a
-solução pronta, fora de escopo, erro sem traceback Python. Resultado esperado: 7/7 aprovados.
+Valida: comando unico, entrada vazia, recusas, fora de escopo, modelo
+indisponivel, encerramento interativo e sessao invalida. Preserva stdout,
+stderr, codigos e tempos de cada comando, sem depender do caminho de Python
+especifico do Linux. A CLI e executada numa copia temporaria do pacote.
 
 ### 6.2. Testes de memória
 
@@ -222,8 +244,10 @@ source .venv/bin/activate
 python test_memoria.py
 ```
 
-Valida: múltiplos turnos na mesma sessão, contexto injetado, exercício com continuidade,
-memória não tratada como fato.
+Executa os cenarios E3 e E6: exercicio com tentativas e correcao de historico
+falso. Salva todos os turnos e snapshots da memoria. O roteamento e a
+persistencia possuem verificacoes automaticas; a correcao do feedback possui
+rubricas para leitura critica, sem declarar sucesso antecipadamente.
 
 ### 6.3. Testes de roteamento
 
@@ -243,19 +267,23 @@ source .venv/bin/activate
 python test_etapa7.py
 ```
 
-Executa as 7 categorias do roteiro de avaliação mais testes extras de erro. As evidências
-das respostas reais são salvas em `evidencias/testes_etapa7/`.
+Executa as sete categorias do roteiro de avaliacao e cenarios extras. As
+respostas reais integrais sao salvas em `evidencias/execucoes/<data_id>/`.
+Os registros antigos de `evidencias/testes_etapa7/` sao preservados.
+Concluir uma resposta sem erro nao aprova automaticamente seu conteudo.
 
 ### Testes locais de prompts, continuidade e sessoes
 
 ```bash
-python -m unittest -v test_prompts test_continuidade
+python -m unittest -v test_avaliacao test_prompts test_continuidade test_exemplos_java
 ```
 
 Usam a memoria real em diretorios temporarios e substituem a fronteira com
 CrewAI/Ollama. Verificam roteamento, persistencia do exercicio, isolamento de
 sessoes, retomada, limpeza, recusas e falhas sem modificar as sessoes do projeto.
 Nao substituem a validacao pedagogica com o modelo local.
+Os testes Java requerem um JDK e compilam/executam os exemplos em diretorios
+temporarios; sao ignorados quando `javac` ou `java` nao estiverem disponiveis.
 
 ---
 

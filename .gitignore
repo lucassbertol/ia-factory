@@ -1,5 +1,8 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+
+# Bancos temporarios do framework nos testes; os JSONs e logs permanecem versionaveis.
+evidencias/execucoes/*/runtime/
 *.py[codz]
 *$py.class
 

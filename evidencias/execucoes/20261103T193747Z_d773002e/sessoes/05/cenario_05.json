@@ -1,0 +1,10 @@
+[
+  {
+    "timestamp": "2026-11-03T16:45:12.731511",
+    "pergunta": "Com qual padrão o Factory Method é mais confundido? Explique a diferença entre eles e por que essa confusão acontece.",
+    "resposta": "O Factory Method é frequentemente confundido com outros padrões de criação, como o Factory Method e o Abstract Factory. Nesse contexto, vamos comparar esses padrões para entender quando usar cada um:\n\n- **Factory Method**: Este padrão permite que subclasses definam o tipo de objeto concreto a ser criado por uma família de classes de criação. É útil quando cada classe de criação criará apenas um tipo de objeto específico.\n\n- **Abstract Factory**: Este padrão permite a criação de uma família de objetos relacionados nas classes de criação. É útil quando diferentes classes de criação criam diferentes familias de objetos relacionados.\n\nQuando uma única classe de criação cria objetos diferentes ou quando é dita diretamente pelo cliente, o Factory Method não é apropriado. Nesse caso, outros padrões como o Factory Method ou o Abstract Factory podem ser usados.\n\nEntão, a pergunta do estudante é resumida: O Factory Method é frequentemente confundido com o **Factory Method e Abstract Factory**, devido à similaridade na abordagem de delegar criação de objetos para subclasses. A principal diferença é que o Factory Method permite uma criação específica de objetos, enquanto o Abstract Factory permite que múltiplas classes de objetos criem objetos relacionados.",
+    "agente": "guardiao",
+    "intencao": "diagnostico",
+    "exercicio_pendente": ""
+  }
+]

@@ -1,0 +1,18 @@
+{
+  "id": "unitarios",
+  "comando": [
+    "/tmp/ia-factory-test-venv/bin/python",
+    "-B",
+    "/home/lucas-pc/ia-factory/executar_testes.py",
+    "--unitarios-worker",
+    "--diretorio",
+    "/home/lucas-pc/ia-factory/evidencias/execucoes/20261103T195026Z_4d8c10a2"
+  ],
+  "cwd": "/home/lucas-pc/ia-factory",
+  "timeout_segundos": 120,
+  "codigo_saida": 0,
+  "status": "aprovado",
+  "duracao_segundos": 6.743,
+  "stdout": "unitarios.stdout.txt",
+  "stderr": "unitarios.stderr.txt"
+}

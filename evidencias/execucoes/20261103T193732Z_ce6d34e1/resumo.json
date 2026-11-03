@@ -1,0 +1,44 @@
+{
+  "resultados": [
+    {
+      "id": "unitarios",
+      "comando": [
+        "/tmp/ia-factory-test-venv/bin/python",
+        "-B",
+        "-m",
+        "unittest",
+        "-v",
+        "test_avaliacao",
+        "test_prompts",
+        "test_continuidade",
+        "test_exemplos_java"
+      ],
+      "cwd": "/home/lucas-pc/ia-factory",
+      "timeout_segundos": 120,
+      "codigo_saida": 0,
+      "status": "aprovado",
+      "duracao_segundos": 1.771,
+      "stdout": "unitarios.stdout.txt",
+      "stderr": "unitarios.stderr.txt"
+    },
+    {
+      "id": "roteamento",
+      "comando": [
+        "/tmp/ia-factory-test-venv/bin/python",
+        "-B",
+        "test_roteamento.py"
+      ],
+      "cwd": "/home/lucas-pc/ia-factory",
+      "timeout_segundos": 120,
+      "codigo_saida": 0,
+      "status": "aprovado",
+      "duracao_segundos": 3.32,
+      "stdout": "roteamento.stdout.txt",
+      "stderr": "roteamento.stderr.txt"
+    }
+  ],
+  "contagens": {
+    "aprovado": 2
+  },
+  "codigo_saida": 0
+}

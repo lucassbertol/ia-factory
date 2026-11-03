@@ -1,0 +1,202 @@
+{
+  "resultados": [
+    {
+      "comando": [
+        "/tmp/ia-factory-test-venv/bin/python",
+        "-B",
+        "-m",
+        "agente",
+        "--sessao",
+        "unica",
+        "Explique Factory Method em duas frases."
+      ],
+      "cwd": "/tmp/ia-cli-7captc77",
+      "entrada_stdin": null,
+      "stdout": "\nSistema (Factory Method):\nFactory Method é um padrão criacional que permite que um componente específico de criação decida de qual concreta instanciar dependendo das circunstâncias. O padrão deixa que a instância concreta do produto seja responsabilidade de subclasses, ajudando a separar a lógica de instância de criação de um criador concreto e aumentando a modularidade e flexibilidade.\n\n",
+      "stderr": "Using an approximate input token count for model 'qwen2.5:3b': assuming one token per four characters because a native token count is unavailable.\nWARNING:crewai.llms.base_llm:Using an approximate input token count for model 'qwen2.5:3b': assuming one token per four characters because a native token count is unavailable.\n",
+      "codigo_saida": 0,
+      "timeout": false,
+      "duracao_segundos": 44.929,
+      "id": "comando_unico",
+      "criterios": {
+        "terminou_no_prazo": true,
+        "codigo_correto": true,
+        "mensagem_esperada": true,
+        "sem_traceback": true
+      },
+      "status": "aprovado"
+    },
+    {
+      "comando": [
+        "/tmp/ia-factory-test-venv/bin/python",
+        "-B",
+        "-m",
+        "agente",
+        ""
+      ],
+      "cwd": "/tmp/ia-cli-7captc77",
+      "entrada_stdin": null,
+      "stdout": "\n[Erro] Voce nao digitou nenhuma pergunta. Tente novamente, por exemplo: \"python -m agente \"O que e o padrao Factory Method?\"\n",
+      "stderr": "",
+      "codigo_saida": 1,
+      "timeout": false,
+      "duracao_segundos": 2.94,
+      "id": "entrada_vazia",
+      "criterios": {
+        "terminou_no_prazo": true,
+        "codigo_correto": true,
+        "mensagem_esperada": true,
+        "sem_traceback": true
+      },
+      "status": "aprovado"
+    },
+    {
+      "comando": [
+        "/tmp/ia-factory-test-venv/bin/python",
+        "-B",
+        "-m",
+        "agente",
+        "Invente um padrão Z"
+      ],
+      "cwd": "/tmp/ia-cli-7captc77",
+      "entrada_stdin": null,
+      "stdout": "\n[Erro] Nao posso inventar padroes, participantes, consequencias ou exemplos. Quando nao sei algo, digo que nao sei e sugiro a consulta ao material da disciplina.\n",
+      "stderr": "",
+      "codigo_saida": 1,
+      "timeout": false,
+      "duracao_segundos": 2.854,
+      "id": "recusa_invencao",
+      "criterios": {
+        "terminou_no_prazo": true,
+        "codigo_correto": true,
+        "mensagem_esperada": true,
+        "sem_traceback": true
+      },
+      "status": "aprovado"
+    },
+    {
+      "comando": [
+        "/tmp/ia-factory-test-venv/bin/python",
+        "-B",
+        "-m",
+        "agente",
+        "Me entregue o código pronto"
+      ],
+      "cwd": "/tmp/ia-cli-7captc77",
+      "entrada_stdin": null,
+      "stdout": "\n[Erro] Nao entrego solucoes prontas, pois isso prejudica seu aprendizado. Posso orientar voce passo a passo: qual parte voce gostaria de entender primeiro?\n",
+      "stderr": "",
+      "codigo_saida": 1,
+      "timeout": false,
+      "duracao_segundos": 2.935,
+      "id": "recusa_solucao",
+      "criterios": {
+        "terminou_no_prazo": true,
+        "codigo_correto": true,
+        "mensagem_esperada": true,
+        "sem_traceback": true
+      },
+      "status": "aprovado"
+    },
+    {
+      "comando": [
+        "/tmp/ia-factory-test-venv/bin/python",
+        "-B",
+        "-m",
+        "agente",
+        "Qual a melhor receita de bolo?"
+      ],
+      "cwd": "/tmp/ia-cli-7captc77",
+      "entrada_stdin": null,
+      "stdout": "\n[Erro] Este sistema ensina apenas o padrao Factory Method. 'Qual a melhor receita de bolo?' esta fora do escopo. Consulte o material da disciplina.\n",
+      "stderr": "",
+      "codigo_saida": 1,
+      "timeout": false,
+      "duracao_segundos": 2.843,
+      "id": "fora_escopo",
+      "criterios": {
+        "terminou_no_prazo": true,
+        "codigo_correto": true,
+        "mensagem_esperada": true,
+        "sem_traceback": true
+      },
+      "status": "aprovado"
+    },
+    {
+      "comando": [
+        "/tmp/ia-factory-test-venv/bin/python",
+        "-B",
+        "-m",
+        "agente",
+        "Explique Factory Method"
+      ],
+      "cwd": "/tmp/ia-cli-7captc77",
+      "entrada_stdin": null,
+      "stdout": "[CrewAIEventsBus] Warning: Event pairing mismatch. 'llm_call_failed' closed \n'flow_started' (expected 'llm_call_started')\n[CrewAIEventsBus] Warning: Event pairing mismatch. 'llm_call_failed' closed \n'flow_started' (expected 'llm_call_started')\n[CrewAIEventsBus] Warning: Event pairing mismatch. 'llm_call_failed' closed \n'flow_started' (expected 'llm_call_started')\n\n[Erro] O modelo retornou uma saida inesperada e nao foi possivel montar uma resposta confiavel. Tente reformular sua pergunta.\n[Detalhe tecnico] Failed to connect to OpenAI API: Connection error.\n",
+      "stderr": "Using an approximate input token count for model 'qwen2.5:3b': assuming one token per four characters because a native token count is unavailable.\nERROR:root:Failed to connect to OpenAI API: Connection error.\nERROR:root:OpenAI API call failed: Failed to connect to OpenAI API: Connection error.\nERROR:crewai.flow.runtime:Error executing listener call_llm_and_parse: Failed to connect to OpenAI API: Connection error.\nWARNING:crewai.llms.base_llm:Using an approximate input token count for model 'qwen2.5:3b': assuming one token per four characters because a native token count is unavailable.\nERROR:root:Failed to connect to OpenAI API: Connection error.\nERROR:root:OpenAI API call failed: Failed to connect to OpenAI API: Connection error.\nERROR:crewai.flow.runtime:Error executing listener call_llm_and_parse: Failed to connect to OpenAI API: Connection error.\nWARNING:crewai.llms.base_llm:Using an approximate input token count for model 'qwen2.5:3b': assuming one token per four characters because a native token count is unavailable.\nERROR:root:Failed to connect to OpenAI API: Connection error.\nERROR:root:OpenAI API call failed: Failed to connect to OpenAI API: Connection error.\nERROR:crewai.flow.runtime:Error executing listener call_llm_and_parse: Failed to connect to OpenAI API: Connection error.\n",
+      "codigo_saida": 1,
+      "timeout": false,
+      "duracao_segundos": 7.377,
+      "id": "modelo_indisponivel",
+      "criterios": {
+        "terminou_no_prazo": true,
+        "codigo_correto": true,
+        "mensagem_esperada": true,
+        "sem_traceback": true
+      },
+      "status": "aprovado"
+    },
+    {
+      "comando": [
+        "/tmp/ia-factory-test-venv/bin/python",
+        "-B",
+        "-m",
+        "agente",
+        "--sessao",
+        "interativo_teste"
+      ],
+      "cwd": "/tmp/ia-cli-7captc77",
+      "entrada_stdin": "sair\n",
+      "stdout": "\nSistema pedagógico: padrão Factory Method.\nSessao: interativo_teste\nDigite 'sair' para encerrar.\n\nVocê: Encerrando.\n",
+      "stderr": "",
+      "codigo_saida": 0,
+      "timeout": false,
+      "duracao_segundos": 2.878,
+      "id": "interativo_sair",
+      "criterios": {
+        "terminou_no_prazo": true,
+        "codigo_correto": true,
+        "mensagem_esperada": true,
+        "sem_traceback": true
+      },
+      "status": "aprovado"
+    },
+    {
+      "comando": [
+        "/tmp/ia-factory-test-venv/bin/python",
+        "-B",
+        "-m",
+        "agente",
+        "--sessao",
+        "../fora",
+        "Factory Method"
+      ],
+      "cwd": "/tmp/ia-cli-7captc77",
+      "entrada_stdin": null,
+      "stdout": "",
+      "stderr": "usage: __main__.py [-h] [--sessao ID] [--limpar-sessao] [pergunta ...]\n__main__.py: error: Sessao invalida: use de 1 a 64 letras, numeros, '_' ou '-'.\n",
+      "codigo_saida": 2,
+      "timeout": false,
+      "duracao_segundos": 2.835,
+      "id": "sessao_invalida",
+      "criterios": {
+        "terminou_no_prazo": true,
+        "codigo_correto": true,
+        "mensagem_esperada": true,
+        "sem_traceback": true
+      },
+      "status": "aprovado"
+    }
+  ],
+  "codigo_saida": 0
+}
