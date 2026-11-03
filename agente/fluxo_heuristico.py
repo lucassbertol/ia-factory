@@ -20,6 +20,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import unicodedata
+import re
 
 
 def _normaliza(texto: str) -> str:
@@ -33,13 +34,22 @@ def _normaliza(texto: str) -> str:
 class Intencao:
     """Classificacao da intencao da pergunta do estudante."""
 
-    tipo: str  # conceito | exemplo | exercicio | diagnostico | fechamento | fora_de_escopo | inventicao | solucao_pronta
+    tipo: str  # conceito | exemplo | exercicio | avaliacao | diagnostico | fechamento | fora_de_escopo | inventicao | solucao_pronta
     confianca: float
     detalhe: str = ""
 
 
-def classificar_intencao(pergunta: str) -> Intencao:
-    """Classifica a intencao da pergunta (heurístico por palavras-chave)."""
+def classificar_intencao(
+    pergunta: str,
+    *,
+    ultima_intencao: str = "",
+    exercicio_pendente: bool = False,
+) -> Intencao:
+    """Classifica o pedido, considerando a continuidade da sessao quando informada.
+
+    As recusas tem prioridade. Pedidos explicitos de conceito/exemplo/pratica
+    mantem seu destino; tentativas e continuacoes usam o estado pedagogico.
+    """
     p = _normaliza(pergunta)
 
     def contem(frases: list[str]) -> bool:
@@ -82,6 +92,33 @@ def classificar_intencao(pergunta: str) -> Intencao:
         ]
     ):
         return Intencao("solucao_pronta", 0.95, "pedido de solução pronta")
+
+    # Uma resposta a pratica nao deve ser confundida com um novo pedido de
+    # exercicio so porque menciona a palavra "exercicio" ou contem codigo.
+    if contem(["encerrar exercicio", "encerrar o exercicio", "cancelar exercicio",
+               "cancelar o exercicio", "desistir do exercicio"]):
+        return Intencao("fechamento", 0.95, "encerramento explicito da pratica")
+
+    if exercicio_pendente and contem(
+        ["minha resposta", "minha tentativa", "tentei", "agora eu", "eu usaria",
+         "acho que", "eu faria", "public class", "class ", "```"]
+    ) and not p.lstrip().startswith(("explique", "mostre", "de um exemplo", "proponha")):
+        return Intencao("avaliacao", 0.9, "tentativa referente ao exercicio pendente")
+
+    # Continuacoes elipticas precisam de contexto; nao basta tornar toda
+    # mensagem desconhecida parte da aula (isso aceitaria assuntos alheios).
+    curta = re.sub(r"[^\w\s]", "", p).strip()
+    if exercicio_pendente and curta == "nao entendi":
+        return Intencao("avaliacao", 0.8, "duvida sobre a atividade em andamento")
+    if ultima_intencao and curta in {
+        "sim", "nao", "entendi", "ok", "certo", "continue", "pode continuar",
+        "e por que", "por que", "como assim", "nao sei", "e depois",
+        "pode explicar melhor", "e quando devo usalo",
+    }:
+        tipo = "avaliacao" if exercicio_pendente else ultima_intencao
+        if tipo not in {"conceito", "exemplo", "diagnostico", "avaliacao", "fechamento"}:
+            tipo = "conceito"
+        return Intencao(tipo, 0.8, "continuidade do turno anterior")
 
     # 2. Exercício — pedido explícito de prática
     if contem(
@@ -249,6 +286,8 @@ def classificar_intencao(pergunta: str) -> Intencao:
 
     # 8. Default: conceito (tem vocabulário do domínio, mas não casou
     # nenhuma intenção específica acima).
+    if exercicio_pendente:
+        return Intencao("avaliacao", 0.7, "resposta de dominio durante a pratica")
     return Intencao("conceito", 0.5, "intenção não identificada com certeza")
 
 
@@ -262,6 +301,11 @@ def decidir_agentes(intencao: Intencao, pergunta: str = "") -> list[str]:
 
     O Guardiao está sempre presente (revisão final anti-alucinação).
     """
+    # Codigo e termos conceituais na tentativa sao dados a avaliar, nao
+    # pedidos adicionais de exemplo ou de explicacao por outros agentes.
+    if intencao.tipo == "avaliacao":
+        return ["inquiridor", "guardiao"]
+
     base_por_intencao = {
         "conceito": ["tutor"],
         "exemplo": ["exemplificador"],

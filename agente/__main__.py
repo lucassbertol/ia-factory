@@ -16,6 +16,7 @@ Tratamento de erros:
 from __future__ import annotations
 
 import sys
+import argparse
 
 from .config import CLI_COMANDO, PADRAO_ENSINADO
 from .erro import (
@@ -27,6 +28,7 @@ from .erro import (
     ErroSolucaoPronta,
 )
 from .fluxo import executar_fluxo
+from .memoria import MemoriaConversa
 
 
 def _imprimir_erro(erro) -> None:
@@ -36,10 +38,10 @@ def _imprimir_erro(erro) -> None:
         print(f"[Detalhe tecnico] {erro.mensagem_tecnica}")
 
 
-def executar_uma_vez(pergunta: str) -> int:
+def executar_uma_vez(pergunta: str, sessao_id: str = "default") -> int:
     """Executa uma única pergunta e imprime a resposta. Retorna código de saída."""
     try:
-        resultado = executar_fluxo(pergunta)
+        resultado = executar_fluxo(pergunta, sessao_id=sessao_id)
         print(f"\nSistema ({PADRAO_ENSINADO}):\n{resultado.resposta}\n")
         return 0
     except ErroEntradaVazia as e:
@@ -66,11 +68,11 @@ def executar_uma_vez(pergunta: str) -> int:
         return 1
 
 
-def modo_interativo() -> int:
+def modo_interativo(sessao_id: str = "interativo") -> int:
     """Abre um laço de conversa contínua no terminal."""
     print(f"\nSistema pedagógico: padrão {PADRAO_ENSINADO}.")
+    print(f"Sessao: {sessao_id}")
     print("Digite 'sair' para encerrar.\n")
-    sessao_id = "interativo"
     while True:
         try:
             pergunta = input("Você: ")
@@ -83,21 +85,32 @@ def modo_interativo() -> int:
         if not pergunta.strip():
             print("Digite uma pergunta válida.\n")
             continue
-        codigo = executar_uma_vez(pergunta)
+        codigo = executar_uma_vez(pergunta, sessao_id=sessao_id)
         if codigo != 0:
             print("(Tente novamente.)\n")
 
 
 def main() -> int:
     """Ponto de entrada principal da CLI."""
-    args = sys.argv[1:]
+    parser = argparse.ArgumentParser(description=f"Chat pedagogico: {PADRAO_ENSINADO}")
+    parser.add_argument("--sessao", metavar="ID", help="Identificador para iniciar ou retomar uma conversa")
+    parser.add_argument("--limpar-sessao", action="store_true", help="Apaga o historico e o exercicio da sessao selecionada")
+    parser.add_argument("pergunta", nargs="*", help="Pergunta; sem ela, abre o modo interativo")
+    args = parser.parse_args()
+    sessao_id = args.sessao or ("default" if args.pergunta or args.limpar_sessao else "interativo")
+    try:
+        memoria = MemoriaConversa(sessao_id)
+        if args.limpar_sessao:
+            memoria.limpar()
+            print(f"Sessao '{sessao_id}' limpa.")
+    except (ValueError, OSError) as exc:
+        parser.error(str(exc))
 
-    if not args:
-        # Nenhum argumento: modo interativo
-        return modo_interativo()
-
-    pergunta = " ".join(args)
-    return executar_uma_vez(pergunta)
+    if args.pergunta:
+        return executar_uma_vez(" ".join(args.pergunta), sessao_id=sessao_id)
+    if args.limpar_sessao:
+        return 0
+    return modo_interativo(sessao_id=sessao_id)
 
 
 if __name__ == "__main__":

@@ -273,7 +273,7 @@ Os quatro agentes se coordenam por meio do CrewAI, conforme implementado em `age
 
 ### Processo de coordenacao
 
-1. **Classificacao da intencao** (`agente/fluxo_heuristico.py`): a pergunta do estudante e classificada em uma de oito intencoes (conceito, exemplo, exercicio, diagnostico, fechamento, inventicao, solucao_pronta, fora_de_escopo). A ordem de prioridade e: invencao → solucao pronta → exercicio → exemplo → diagnostico → fechamento → conceito → fora de escopo. Assim, um pedido explicito de exercicio nao e classificado como conceito.
+1. **Classificacao da intencao** (`agente/fluxo_heuristico.py`): a pergunta do estudante e classificada em uma de nove intencoes (conceito, exemplo, exercicio, avaliacao, diagnostico, fechamento, inventicao, solucao_pronta, fora_de_escopo). As recusas tem prioridade; em seguida sao considerados encerramento e continuidade da atividade. Para pedidos independentes, a ordem e: exercicio → exemplo → diagnostico → fechamento → conceito → fora de escopo. Assim, um pedido explicito de exercicio nao e classificado como conceito.
 
 2. **Decisao de agentes** (`decidir_agentes`): com base na intencao, seleciona-se o subconjunto relevante de agentes. O Guardiao esta **sempre presente** (ultima tarefa, revisao final). Pedidos combinados na mesma pergunta (ex.: "explique e de um exemplo") acrescentam os agentes correspondentes, na ordem pedagogica tutor → exemplificador → inquiridor.
 
@@ -282,12 +282,19 @@ Os quatro agentes se coordenam por meio do CrewAI, conforme implementado em `age
    | conceito | tutor, guardiao |
    | exemplo | exemplificador, guardiao |
    | exercicio/diagnostico | inquiridor, guardiao |
+   | avaliacao (tentativa/continuidade de exercicio) | inquiridor, guardiao |
    | fechamento | tutor, guardiao |
    | inventicao/solucao_pronta/fora_de_escopo | guardiao |
 
 3. **Execucao sequencial** (`Process.sequencial` do CrewAI): as tarefas sao executadas em ordem, com o contexto de cada tarefa passado para a proxima (`context=[tarefa_anterior]`). A pergunta do estudante, o historico recente e a intencao classificada sao injetados no texto de **todas** as tarefas (`montar_crew(..., pergunta=..., contexto=..., intencao=...)`), para que cada agente responda ao que foi efetivamente pedido.
 
 4. **Revisao final do Guardiao**: o Guardiao e sempre a ultima tarefa. Revisa a resposta consolidada, remove redundancias e contradicoes, aplica regras anti-alucinacao e produz a resposta final.
+
+O roteamento tambem recebe a ultima intencao da sessao e a existencia de
+exercicio pendente. A intencao `avaliacao` usa o enunciado persistido e o
+historico para orientar feedback e nova tentativa, sem gerar outra atividade.
+Recusas mantem prioridade sobre a continuidade. Os campos e limites da
+persistencia estao detalhados em `docs/memoria.md`.
 
 ### Fluxo de dados
 
@@ -316,6 +323,16 @@ O Guardiao remove repeticoes e contradicoes entre agentes antes de consolidar. S
 ---
 
 ## 7. Correspondencia entre documentacao e implementacao
+
+Na montagem da crew, `carregar_prompt(nome)` le o arquivo `.txt` do agente
+ativo e `_criar_agent` fornece seu conteudo integral ao campo `backstory` do
+CrewAI, que compoe as instrucoes de sistema. Isso inclui persona, objetivo,
+contexto, escopo, estrategia pedagogica, casos de erro, regras anti-alucinacao
+e formato das respostas. Os campos `role` e `goal` continuam identificando o
+agente no framework. Os arquivos `.txt` sao a fonte das instrucoes em execucao;
+as transcricoes neste documento servem como referencia para leitura.
+Se um arquivo de prompt nao existir, a montagem falha em vez de criar um
+agente sem suas regras.
 
 Este documento reflete **exatamente** o que esta implementado:
 

@@ -12,6 +12,7 @@ reavalia a confiabilidade a cada turno.
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -23,6 +24,8 @@ class MemoriaConversa:
     """Carrega e salva o historico de turnos de uma sessao."""
 
     def __init__(self, sessao_id: str) -> None:
+        if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", sessao_id):
+            raise ValueError("Sessao invalida: use de 1 a 64 letras, numeros, '_' ou '-'.")
         self.sessao_id = sessao_id
         self.caminho = MEMORIA_DIR / f"{sessao_id}.json"
         MEMORIA_DIR.mkdir(parents=True, exist_ok=True)
@@ -43,6 +46,7 @@ class MemoriaConversa:
         pergunta: str,
         resposta: str,
         agente: str,
+        intencao: str = "",
     ) -> None:
         """Adiciona um turno ao historico e persiste em disco."""
         turno = {
@@ -50,6 +54,11 @@ class MemoriaConversa:
             "pergunta": pergunta,
             "resposta": resposta,
             "agente": agente,
+            "intencao": intencao,
+            "exercicio_pendente": (
+                resposta if intencao == "exercicio" else
+                "" if intencao == "fechamento" else self.exercicio_pendente
+            ),
         }
         self._historico.append(turno)
         self._persistir()
@@ -68,20 +77,55 @@ class MemoriaConversa:
         """
         if not self._historico:
             return ""
+        limite = max(0, MAX_CONTEXTO_CARACTERES)
+        cabecalho = "=== Historico da conversa (sessao " + self.sessao_id + ") ===\n"
+        if self.exercicio_pendente:
+            # Reserva espaco para o enunciado mesmo apos varios feedbacks.
+            cabecalho += "Exercicio em andamento (avalie a tentativa com base nele):\n"
+            cabecalho += self.exercicio_pendente[:limite // 2] + "\n\n"
+        cabecalho = cabecalho[:limite]
+        disponivel = limite - len(cabecalho)
         partes: list[str] = []
-        total = 0
         for turno in reversed(self._historico):
             bloco = (
                 f"[{turno['timestamp']}] Estudante: {turno['pergunta']}\n"
                 f"[{turno['timestamp']}] Sistema ({turno['agente']}): {turno['resposta']}\n"
             )
-            if total + len(bloco) > MAX_CONTEXTO_CARACTERES and partes:
+            if len(bloco) > disponivel:
+                if not partes and disponivel > 0:
+                    partes.insert(0, bloco[:disponivel])
                 break
             partes.insert(0, bloco)
-            total += len(bloco)
-        if not partes:
+            disponivel -= len(bloco)
+        return cabecalho + "".join(partes)
+
+    @property
+    def ultima_intencao(self) -> str:
+        if not self._historico:
             return ""
-        return "=== Historico da conversa (sessao " + self.sessao_id + ") ===\n" + "".join(partes)
+        ultimo = self._historico[-1]
+        if ultimo.get("intencao"):
+            return ultimo["intencao"]
+        # Compatibilidade com os JSONs anteriores a introducao do estado.
+        from .fluxo_heuristico import classificar_intencao
+        return classificar_intencao(ultimo["pergunta"]).tipo
+
+    @property
+    def exercicio_pendente(self) -> str:
+        if not self._historico:
+            return ""
+        ultimo = self._historico[-1]
+        if "exercicio_pendente" in ultimo:
+            return ultimo["exercicio_pendente"]
+        # Sessoes antigas nao possuem estado: recupera a pratica mais recente.
+        from .fluxo_heuristico import classificar_intencao
+        for turno in reversed(self._historico):
+            tipo = turno.get("intencao") or classificar_intencao(turno["pergunta"]).tipo
+            if tipo == "fechamento":
+                break
+            if tipo == "exercicio":
+                return turno["resposta"]
+        return ""
 
     def limpar(self) -> None:
         """Remove o historico da sessao (uso em testes/debug)."""

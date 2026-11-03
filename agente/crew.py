@@ -18,15 +18,21 @@ from crewai import Agent, Crew, Process, Task
 from .agentes import Tutor, Exemplificador, Inquiridor, Guardiao
 from .config import PADRAO_ENSINADO
 from .llm import obter_llm
+from .prompts import carregar_prompt
 
 
-def _criar_agent(agente_instancia) -> Agent:
-    """Cria um Agent do CrewAI a partir de uma definicao de agente."""
+def _criar_agent(nome: str, agente_instancia) -> Agent:
+    """Injeta o prompt completo no backstory, usado pelo CrewAI no sistema.
+
+    Os arquivos prompts/*.txt sao a fonte das instrucoes pedagogicas.
+    Role e goal continuam identificando o agente no framework.
+    """
     definicao = agente_instancia.definicao
+    prompt = carregar_prompt(nome)
     return Agent(
         role=definicao.role,
         goal=definicao.goal,
-        backstory=definicao.backstory,
+        backstory=prompt,
         llm=obter_llm(),
         verbose=False,
         allow_delegation=False,
@@ -65,7 +71,7 @@ def montar_crew(
     agents_crewai: dict[str, Agent] = {}
     for nome in agentes_ativos:
         if nome in instancias:
-            agents_crewai[nome] = _criar_agent(instancias[nome])
+            agents_crewai[nome] = _criar_agent(nome, instancias[nome])
 
     # Blocos compartilhados por todas as tarefas
     contexto_sistema = (
@@ -86,6 +92,15 @@ def montar_crew(
 
     # Orientacao especifica para a intencao, usada pelo Inquiridor e pelo Guardiao
     orientacao_inquiridor = {
+        "avaliacao": (
+            "O estudante esta continuando um EXERCICIO EM ANDAMENTO. Use o "
+            "enunciado e o historico para avaliar a tentativa ou responder a "
+            "duvida. NAO proponha outro exercicio. Diga o que esta correto, "
+            "aponte o equivoco e de uma pista com uma pergunta guia, sem "
+            "entregar a solucao completa. Se a resposta for apenas 'sim', "
+            "'nao' ou nao permitir avaliacao, peca que explique o raciocinio; "
+            "nao afirme que acertou sem evidencia.\n\n"
+        ),
         "exercicio": (
             "O estudante pediu um EXERCICIO. Apresente SOMENTE o enunciado do "
             "exercicio (contexto + o que ele deve fazer) e uma pergunta guia. "
@@ -100,6 +115,11 @@ def montar_crew(
     }.get(intencao, "")
 
     orientacao_guardiao = {
+        "avaliacao": (
+            "Preserve a avaliacao da tentativa e a pergunta guia do Inquiridor. "
+            "NAO substitua por conceito generico, NAO crie outro exercicio e "
+            "NAO entregue a solucao completa. Nao declare acerto sem evidencia.\n\n"
+        ),
         "exercicio": (
             "O estudante pediu um EXERCICIO: preserve o enunciado do exercicio e "
             "a pergunta guia. NAO substitua o exercicio por uma explicacao do "

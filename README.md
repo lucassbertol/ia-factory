@@ -147,6 +147,34 @@ python -m agente
 
 Digite `sair` para encerrar.
 
+### Sessoes e continuidade dos exercicios
+
+O comando unico usa a sessao `default`; o modo interativo usa `interativo`.
+Para manter uma conversa separada e retoma-la em qualquer modo, escolha um ID:
+
+```bash
+python -m agente --sessao ana "Proponha um exercicio de Factory Method"
+python -m agente --sessao ana "Minha resposta: usaria um metodo estatico"
+python -m agente --sessao ana "Agora eu usaria subclasses de Creator"
+python -m agente --sessao ana
+```
+
+Uma tentativa de exercicio vai para o Inquiridor e o Guardiao, com o enunciado
+preservado no contexto. Pedidos explicitos de explicacao ou exemplo continuam
+disponiveis durante a pratica. Use `Encerrar exercicio` ou peca um fechamento
+para encerrar a atividade; um novo pedido de exercicio substitui o anterior.
+O sistema nao decide automaticamente que o estudante acertou para encerrar.
+
+Para apagar o historico e o estado de uma sessao:
+
+```bash
+python -m agente --sessao ana --limpar-sessao
+```
+
+Esse comando encerra apos limpar. Pode incluir uma pergunta para comecar de novo
+imediatamente. Os IDs aceitam de 1 a 64 letras ASCII, numeros, `_` ou `-`.
+As conversas sao sequenciais; evite gravar simultaneamente na mesma sessao.
+
 ### 5.3. Exemplos de uso
 
 ```bash
@@ -217,6 +245,17 @@ python test_etapa7.py
 
 Executa as 7 categorias do roteiro de avaliação mais testes extras de erro. As evidências
 das respostas reais são salvas em `evidencias/testes_etapa7/`.
+
+### Testes locais de prompts, continuidade e sessoes
+
+```bash
+python -m unittest -v test_prompts test_continuidade
+```
+
+Usam a memoria real em diretorios temporarios e substituem a fronteira com
+CrewAI/Ollama. Verificam roteamento, persistencia do exercicio, isolamento de
+sessoes, retomada, limpeza, recusas e falhas sem modificar as sessoes do projeto.
+Nao substituem a validacao pedagogica com o modelo local.
 
 ---
 

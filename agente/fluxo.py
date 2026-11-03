@@ -99,7 +99,11 @@ def executar_fluxo(pergunta: str, sessao_id: str = "default") -> ResultadoFluxo:
     contexto = memoria.contexto_texto()
 
     # 3. Classifica a intenção
-    intencao = classificar_intencao(pergunta)
+    intencao = classificar_intencao(
+        pergunta,
+        ultima_intencao=memoria.ultima_intencao,
+        exercicio_pendente=bool(memoria.exercicio_pendente),
+    )
 
     # 4. Detecta invenção de padrão (anti-alucinação)
     if intencao.tipo == "inventicao":
@@ -139,7 +143,10 @@ def executar_fluxo(pergunta: str, sessao_id: str = "default") -> ResultadoFluxo:
 
     # 9. Salva o turno na memoria (ultimo agente ativo = guardiao se presente)
     agente_ultimo = agentes_ativos[-1] if agentes_ativos else "guardiao"
-    memoria.salvar_turno(pergunta=pergunta, resposta=resposta, agente=agente_ultimo)
+    memoria.salvar_turno(
+        pergunta=pergunta, resposta=resposta, agente=agente_ultimo,
+        intencao=intencao.tipo,
+    )
 
     return ResultadoFluxo(
         resposta=resposta,
