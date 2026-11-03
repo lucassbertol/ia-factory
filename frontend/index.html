@@ -4,10 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Factory IA — Chat</title>
-  <meta name="description" content="Interface minimalista de chat de IA em dark mode." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <meta name="description" content="Aprenda Factory Method com uma equipe pedagógica e um modelo de IA local." />
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
@@ -22,19 +19,6 @@
       <symbol id="i-plus" viewBox="0 0 24 24">
         <path d="M5 12h14" />
         <path d="M12 5v14" />
-      </symbol>
-      <symbol id="i-x" viewBox="0 0 24 24">
-        <path d="M18 6 6 18" />
-        <path d="m6 6 12 12" />
-      </symbol>
-      <symbol id="i-menu" viewBox="0 0 24 24">
-        <path d="M4 6h16" />
-        <path d="M4 12h16" />
-        <path d="M4 18h16" />
-      </symbol>
-      <symbol id="i-rotate" viewBox="0 0 24 24">
-        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-        <path d="M3 3v5h5" />
       </symbol>
       <symbol id="i-bot" viewBox="0 0 24 24">
         <path d="M12 8V4H8" />
@@ -54,36 +38,16 @@
     </defs>
   </svg>
   <div class="app">
-    <!-- Overlay para mobile -->
-    <div class="overlay" id="overlay" aria-hidden="true"></div>
-
-    <!-- ============ SIDEBAR ============ -->
-    <aside class="sidebar" id="sidebar" aria-label="Menu lateral">
-      <div class="sidebar-top">
-        <div class="brand">
-          <span class="brand-mark" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-sparkles" /></svg></span>
-          <span class="brand-name">Factory IA</span>
-        </div>
-        <button class="icon-btn sidebar-close" id="sidebarClose" aria-label="Fechar menu"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-x" /></svg></button>
-      </div>
-
-      <button class="new-chat-btn" id="newChatBtn">
-        <span class="plus" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-plus" /></svg></span>
-        Novo chat
-      </button>
-    </aside>
-
     <!-- ============ MAIN ============ -->
     <main class="main">
       <header class="topbar">
-        <button class="icon-btn menu-btn" id="menuBtn" aria-label="Abrir menu"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-menu" /></svg></button>
-        <div class="topbar-model" title="Agente ativo (placeholder)">
-          <span class="pulse-dot" aria-hidden="true"></span>
-          <span id="topbarAgentName">Agente Geral</span>
-          <span class="topbar-badge">placeholder</span>
+        <div class="topbar-model" title="Sistema pedagógico de Factory Method">
+          <span class="pulse-dot" id="statusDot" aria-hidden="true"></span>
+          <span id="topbarAgentName">Factory Method</span>
+          <span class="topbar-badge">Local</span>
         </div>
         <div class="topbar-actions">
-          <button class="icon-btn" id="clearBtn" aria-label="Limpar conversa" title="Limpar conversa"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-rotate" /></svg></button>
+          <button class="new-chat-btn" id="newChatBtn">Novo chat</button>
         </div>
       </header>
 
@@ -91,7 +55,8 @@
         <!-- Tela inicial / boas-vindas -->
         <div class="welcome" id="welcome">
           <div class="welcome-mark" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-sparkles" /></svg></div>
-          <h1>Olá, como posso ajudar hoje?</h1>
+          <h1>Vamos aprender Factory Method?</h1>
+          <p>Explore o conceito, veja exemplos em Java ou peça um exercício para praticar.</p>
         </div>
         <!-- Mensagens inseridas via app.js -->
       </section>
@@ -100,15 +65,9 @@
       <footer class="composer-wrap">
         <form class="composer" id="composer" autocomplete="off">
           <div class="composer-row">
-            <div class="agent-select-wrap" title="Selecione o agente (placeholder)">
+            <div class="agent-select-wrap" title="Os agentes são coordenados automaticamente conforme sua pergunta">
               <span class="agent-icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-bot" /></svg></span>
-              <select id="agentSelect" aria-label="Selecionar agente">
-                <option value="geral" selected>Agente Geral</option>
-                <option value="codigo">Agente Código</option>
-                <option value="escrita">Agente Escrita</option>
-                <option value="dados">Agente Dados</option>
-              </select>
-              <span class="select-chevron" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-chevron-down" /></svg></span>
+              <span class="team-label">Equipe pedagógica</span>
             </div>
             <span class="composer-hint" id="charHint">Enter envia · Shift+Enter quebra linha</span>
           </div>
@@ -117,7 +76,8 @@
             <textarea
               id="input"
               rows="1"
-              placeholder="Digite sua mensagem..."
+              maxlength="12000"
+              placeholder="Pergunte sobre Factory Method..."
               aria-label="Digite sua mensagem"
             ></textarea>
             <button type="submit" class="send-btn" id="sendBtn" aria-label="Enviar mensagem" title="Enviar">
@@ -125,11 +85,22 @@
             </button>
           </div>
 
-          <p class="disclaimer">Frontend apenas visual — respostas são placeholders locais, sem IA real.</p>
+          <p class="disclaimer" id="connectionStatus" role="status">Conectando ao chat local…</p>
         </form>
       </footer>
     </main>
   </div>
+
+  <dialog class="confirm-dialog" id="newChatDialog" aria-labelledby="newChatTitle" aria-describedby="newChatDescription">
+    <form method="dialog">
+      <h2 id="newChatTitle">Iniciar um novo chat?</h2>
+      <p id="newChatDescription">Todo o histórico e o contexto da conversa até o momento serão apagados. Essa ação não pode ser desfeita.</p>
+      <div class="confirm-actions">
+        <button class="dialog-cancel" value="cancel" autofocus>Cancelar</button>
+        <button class="dialog-confirm" value="confirm">Apagar e iniciar novo chat</button>
+      </div>
+    </form>
+  </dialog>
 
   <script src="./app.js"></script>
 </body>

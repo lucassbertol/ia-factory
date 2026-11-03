@@ -1,8 +1,12 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 
-# Bancos temporarios do framework nos testes; os JSONs e logs permanecem versionaveis.
-evidencias/execucoes/*/runtime/
+# Registros locais das execucoes antigas de testes.
+/evidencias/execucoes/
+
+# Historico local das conversas: clones novos devem iniciar sem sessoes antigas.
+/memoria/sessoes/*
+!/memoria/sessoes/README.md
 *.py[codz]
 *$py.class
 

@@ -32,10 +32,18 @@ A cada chamada da CLI (`python -m agente "pergunta"`):
 O classificador recebe tambem a ultima intencao e a indicacao de exercicio
 pendente. Tentativas como "Minha resposta...", correcoes como "Agora eu..."
 e continuacoes curtas como "Sim" ou "E por que?" sao encaminhadas considerando
-esse estado. Durante a pratica, a intencao `avaliacao` seleciona somente
+esse estado. Apenas tentativas identificaveis recebem `avaliacao`; uma
+continuacao curta durante a pratica recebe `esclarecimento`. Ambas selecionam
 Inquiridor e Guardiao; os termos presentes no codigo da tentativa nao ativam
 outros agentes. As instrucoes pedem feedback sobre a atividade existente,
 sem propor outra nem presumir acerto de uma resposta ambigua.
+
+Pedidos independentes tem prioridade sobre a continuidade implicita. O campo
+`usar_contexto` da intencao fica falso para perguntas independentes; fica verdadeiro
+para tentativas, continuacoes e referencias como "no exemplo anterior".
+O fluxo classifica a pergunta antes de montar o contexto. O enunciado reservado
+e incluido apenas em tentativas/esclarecimentos ou referencias explicitas ao
+exercicio; a persistencia da atividade nao depende de envia-la em todo turno.
 
 Pedidos explicitos de explicacao ou exemplo podem intercalar a pratica sem
 apagar o enunciado. Um novo pedido de exercicio substitui a atividade; um

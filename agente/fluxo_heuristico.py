@@ -4,15 +4,10 @@ Usada pelo fluxo para decidir quais agentes participam. A classificacao
 completa e refinada pode ser feita pelo proprio modelo local nas versoes
 futuras; aqui mantemos simples e determinístico.
 
-Ordem de prioridade (a primeira que casar vence):
-  1. invencao / solucao_pronta  (anti-alucinacao)
-  2. exercicio                  (pedido explicito de pratica)
-  3. exemplo                    (pedido explicito de exemplo/codigo)
-  4. diagnostico                (duvida, confusao, uso incorreto, comparacao)
-  5. fechamento                 (resumo/retomada)
-  6. conceito                   (explicacao do padrao)
-  7. fora_de_escopo             (sem vocabulario do dominio)
-  8. conceito (default)         (tem vocabulario do dominio, mas nao casou)
+Recusas tem prioridade. Tentativas identificaveis usam a pratica pendente.
+Pedidos explicitos de atividade, selecao, comparacao, uso incorreto e exemplo
+sao classificados pelo objetivo, antes de considerar continuacoes ambiguas.
+Exercicio pendente, sozinho, nunca justifica avaliacao de uma mensagem.
 """
 
 from __future__ import annotations
@@ -34,9 +29,10 @@ def _normaliza(texto: str) -> str:
 class Intencao:
     """Classificacao da intencao da pergunta do estudante."""
 
-    tipo: str  # conceito | exemplo | exercicio | avaliacao | diagnostico | fechamento | fora_de_escopo | inventicao | solucao_pronta
+    tipo: str
     confianca: float
     detalhe: str = ""
+    usar_contexto: bool = False
 
 
 def classificar_intencao(
@@ -50,7 +46,7 @@ def classificar_intencao(
     As recusas tem prioridade. Pedidos explicitos de conceito/exemplo/pratica
     mantem seu destino; tentativas e continuacoes usam o estado pedagogico.
     """
-    p = _normaliza(pergunta)
+    p = " ".join(_normaliza(pergunta).split())
 
     def contem(frases: list[str]) -> bool:
         """Verifica se alguma frase (normalizada) esta contida no texto."""
@@ -99,48 +95,57 @@ def classificar_intencao(
                "cancelar o exercicio", "desistir do exercicio"]):
         return Intencao("fechamento", 0.95, "encerramento explicito da pratica")
 
-    if exercicio_pendente and contem(
-        ["minha resposta", "minha tentativa", "tentei", "agora eu", "eu usaria",
-         "acho que", "eu faria", "public class", "class ", "```"]
-    ) and not p.lstrip().startswith(("explique", "mostre", "de um exemplo", "proponha")):
-        return Intencao("avaliacao", 0.9, "tentativa referente ao exercicio pendente")
+    tentativa = re.sub(r"^voltando (?:ao|para o) exercicio\s*[,.:;-]?\s*", "", p)
+    if exercicio_pendente and re.match(
+        r"^(?:minha (?:resposta|tentativa|implementacao)\b|meu codigo\b|tentei\b|"
+        r"agora eu\b|eu usaria\b|eu faria\b|```|(?:public |abstract )?class\s)", tentativa
+    ):
+        return Intencao("avaliacao", 0.9, "tentativa identificavel da atividade", usar_contexto=True)
+
+    referencia_anterior = contem([
+        "exemplo anterior", "codigo anterior", "resposta anterior", "exercicio anterior",
+        "neste exemplo", "nesse exemplo", "neste codigo", "nesse codigo",
+        "neste exercicio", "nesse exercicio", "voce disse",
+    ]) or bool(re.match(r"^e (?:quais|quando|como|por que)\b", p))
+
+    pedido_pratica = (
+        r"^(?:por favor[, ]+)?(?:(?:voce )?(?:pode|poderia)\s+)?(?:me\s+)?"
+        r"(?:proponha|propor|crie|criar|sugira|sugerir|passe|passar|de|dar|quero|gostaria de|peco|resolva)"
+        r"\b.*\b(?:exercicio|desafio|atividade|quiz|tarefa)\b"
+    )
+    if (re.search(pedido_pratica, p)
+            or contem(["me pergunte", "pergunta para mim", "quero praticar", "vamos praticar"])):
+        return Intencao("exercicio", 0.85, "pedido de exercicio pratico")
+
+    # Pedidos expositivos vem antes de palavras como "exercicio" e "exemplo":
+    # mencionar uma atividade nao significa responder a ela ou pedir outra.
+    if contem(["uso incorreto", "uso equivocado", "forma errada", "forma incorreta",
+               "aplicado errado", "aplicado incorretamente", "ma pratica", "antipadrao"]):
+        return Intencao("uso_incorreto", 0.9, "erro, consequencia e correcao", referencia_anterior)
+    if contem(["diferenca", "comparacao", "compare", "comparar", "confundido", "confundida",
+               "mesmo que", "simple factory", "abstract factory"]):
+        return Intencao("comparacao", 0.9, "comparacao entre padroes", referencia_anterior)
+    if (re.search(r"\bquando (?:nao )?(?:usar|utilizar|aplicar|adotar|evitar)\b", p)
+            or contem(["melhor escolha", "deveria ser evitado", "deveria ser evitada",
+                       "em que casos", "vale a pena", "quando devo usar", "quando devo evitar"])):
+        return Intencao("selecao", 0.9, "quando usar e quando evitar", referencia_anterior)
 
     # Continuacoes elipticas precisam de contexto; nao basta tornar toda
     # mensagem desconhecida parte da aula (isso aceitaria assuntos alheios).
     curta = re.sub(r"[^\w\s]", "", p).strip()
-    if exercicio_pendente and curta == "nao entendi":
-        return Intencao("avaliacao", 0.8, "duvida sobre a atividade em andamento")
+    contexto_de_pratica = exercicio_pendente and ultima_intencao in {"exercicio", "avaliacao", "esclarecimento"}
+    if contexto_de_pratica and curta == "nao entendi":
+        return Intencao("esclarecimento", 0.8, "duvida sobre a atividade em andamento", usar_contexto=True)
     if ultima_intencao and curta in {
         "sim", "nao", "entendi", "ok", "certo", "continue", "pode continuar",
         "e por que", "por que", "como assim", "nao sei", "e depois",
         "pode explicar melhor", "e quando devo usalo",
     }:
-        tipo = "avaliacao" if exercicio_pendente else ultima_intencao
-        if tipo not in {"conceito", "exemplo", "diagnostico", "avaliacao", "fechamento"}:
+        tipo = "esclarecimento" if contexto_de_pratica else ultima_intencao
+        if tipo not in {"conceito", "exemplo", "diagnostico", "avaliacao", "fechamento",
+                        "selecao", "comparacao", "uso_incorreto", "esclarecimento"}:
             tipo = "conceito"
-        return Intencao(tipo, 0.8, "continuidade do turno anterior")
-
-    # 2. Exercício — pedido explícito de prática
-    if contem(
-        [
-            "exercício",
-            "exercicio",
-            "proponha",
-            "proponha um",
-            "proposto",
-            "pratique",
-            "praticar",
-            "resolva",
-            "resolver",
-            "tarefa",
-            "desafio",
-            "atividade",
-            "quiz",
-            "pergunta para mim",
-            "me pergunte",
-        ]
-    ):
-        return Intencao("exercicio", 0.85, "pedido de exercício prático")
+        return Intencao(tipo, 0.8, "continuidade do turno anterior", usar_contexto=True)
 
     # 3. Exemplo — pedido explícito de exemplo/código
     if contem(
@@ -159,7 +164,7 @@ def classificar_intencao(
             "aplicacao pratica",
         ]
     ):
-        return Intencao("exemplo", 0.85, "pedido de exemplo")
+        return Intencao("exemplo", 0.85, "pedido de exemplo", referencia_anterior)
 
     # 4. Diagnóstico — dúvida, confusão, uso incorreto, comparação
     if contem(
@@ -195,7 +200,7 @@ def classificar_intencao(
             "limitacoes",
         ]
     ):
-        return Intencao("diagnostico", 0.8, "pedido de diagnóstico/comparação")
+        return Intencao("diagnostico", 0.8, "pedido de diagnostico da duvida", referencia_anterior)
 
     # 5. Fechamento
     if contem(
@@ -211,7 +216,7 @@ def classificar_intencao(
             "conclusao",
         ]
     ):
-        return Intencao("fechamento", 0.8, "pedido de fechamento/resumo")
+        return Intencao("fechamento", 0.8, "pedido de fechamento/resumo", referencia_anterior)
 
     # 6. Conceito — explicação do padrão
     if contem(
@@ -236,7 +241,7 @@ def classificar_intencao(
             "conceito",
         ]
     ):
-        return Intencao("conceito", 0.85, "pedido de explicação do conceito")
+        return Intencao("conceito", 0.85, "pedido de explicação do conceito", referencia_anterior)
 
     # 7. Vocabulário do domínio Factory Method (usado para detectar fora de escopo)
     vocabulario_dominio = [
@@ -286,8 +291,6 @@ def classificar_intencao(
 
     # 8. Default: conceito (tem vocabulário do domínio, mas não casou
     # nenhuma intenção específica acima).
-    if exercicio_pendente:
-        return Intencao("avaliacao", 0.7, "resposta de dominio durante a pratica")
     return Intencao("conceito", 0.5, "intenção não identificada com certeza")
 
 
@@ -303,7 +306,7 @@ def decidir_agentes(intencao: Intencao, pergunta: str = "") -> list[str]:
     """
     # Codigo e termos conceituais na tentativa sao dados a avaliar, nao
     # pedidos adicionais de exemplo ou de explicacao por outros agentes.
-    if intencao.tipo == "avaliacao":
+    if intencao.tipo in {"avaliacao", "esclarecimento"}:
         return ["inquiridor", "guardiao"]
 
     base_por_intencao = {
@@ -311,6 +314,9 @@ def decidir_agentes(intencao: Intencao, pergunta: str = "") -> list[str]:
         "exemplo": ["exemplificador"],
         "exercicio": ["inquiridor"],
         "diagnostico": ["inquiridor"],
+        "selecao": ["tutor"],
+        "comparacao": ["tutor"],
+        "uso_incorreto": ["tutor"],
         "fechamento": ["tutor"],
         "inventicao": [],
         "solucao_pronta": [],
@@ -375,7 +381,7 @@ def decidir_agentes(intencao: Intencao, pergunta: str = "") -> list[str]:
     extras: set[str] = set()
     if pede_exemplo and "exemplificador" not in base:
         extras.add("exemplificador")
-    if (pede_diagnostico or pede_exercicio) and "inquiridor" not in base:
+    if (pede_diagnostico or pede_exercicio) and intencao.tipo not in {"selecao", "comparacao", "uso_incorreto"} and "inquiridor" not in base:
         extras.add("inquiridor")
     if pede_conceito and "tutor" not in base:
         extras.add("tutor")

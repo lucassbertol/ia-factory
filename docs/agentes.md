@@ -293,16 +293,19 @@ Os quatro agentes se coordenam por meio do CrewAI, conforme implementado em `age
 
 ### Processo de coordenacao
 
-1. **Classificacao da intencao** (`agente/fluxo_heuristico.py`): a pergunta do estudante e classificada em uma de nove intencoes (conceito, exemplo, exercicio, avaliacao, diagnostico, fechamento, inventicao, solucao_pronta, fora_de_escopo). As recusas tem prioridade; em seguida sao considerados encerramento e continuidade da atividade. Para pedidos independentes, a ordem e: exercicio → exemplo → diagnostico → fechamento → conceito → fora de escopo. Assim, um pedido explicito de exercicio nao e classificado como conceito.
+1. **Classificacao da intencao** (`agente/fluxo_heuristico.py`): recusas tem prioridade. Uma tentativa identificavel ("minha resposta", "tentei corrigir") usa `avaliacao` quando ha atividade pendente. Pedidos independentes de selecao, comparacao, uso incorreto, exemplo e conceito sao reconhecidos pelo objetivo, sem serem capturados pelo exercicio antigo. Pedir explicitamente um novo exercicio continua permitido, inclusive sobre diferencas entre padroes. Uma resposta curta durante a pratica usa `esclarecimento`, sem presumir tentativa ou acerto.
 
 2. **Decisao de agentes** (`decidir_agentes`): com base na intencao, seleciona-se o subconjunto relevante de agentes. O Guardiao esta **sempre presente** (ultima tarefa, revisao final). Pedidos combinados na mesma pergunta (ex.: "explique e de um exemplo") acrescentam os agentes correspondentes, na ordem pedagogica tutor → exemplificador → inquiridor.
 
    | Intencao | Agentes participantes |
    |----------|----------------------|
    | conceito | tutor, guardiao |
+   | selecao/comparacao | tutor, guardiao |
+   | uso_incorreto | tutor, guardiao (exemplificador se pedir exemplo) |
    | exemplo | exemplificador, guardiao |
    | exercicio/diagnostico | inquiridor, guardiao |
-   | avaliacao (tentativa/continuidade de exercicio) | inquiridor, guardiao |
+   | avaliacao (tentativa identificavel) | inquiridor, guardiao |
+   | esclarecimento durante a pratica | inquiridor, guardiao |
    | fechamento | tutor, guardiao |
    | inventicao/solucao_pronta/fora_de_escopo | guardiao |
 
@@ -313,6 +316,11 @@ Os quatro agentes se coordenam por meio do CrewAI, conforme implementado em `age
 O roteamento tambem recebe a ultima intencao da sessao e a existencia de
 exercicio pendente. A intencao `avaliacao` usa o enunciado persistido e o
 historico para orientar feedback e nova tentativa, sem gerar outra atividade.
+O campo `usar_contexto` indica se a mensagem retoma a conversa ou faz referencia
+ao exemplo/codigo anterior. Uma pergunta independente nao recebe o historico,
+mas o exercicio continua salvo para retomada. As tarefas de selecao, comparacao,
+uso incorreto, diagnostico e esclarecimento possuem instrucoes e saidas esperadas
+proprias; nao recebem a tarefa generica de propor um exercicio.
 Recusas mantem prioridade sobre a continuidade. Os campos e limites da
 persistencia estao detalhados em `docs/memoria.md`.
 

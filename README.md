@@ -153,6 +153,32 @@ python -m agente
 
 Digite `sair` para encerrar.
 
+### Interface web local (opcional)
+
+Com o mesmo ambiente Python e o Ollama ativos, execute:
+
+```bash
+python -m agente.web
+```
+
+Abra **http://127.0.0.1:8000** no navegador. Para usar outra porta:
+
+```bash
+python -m agente.web --port 8001
+```
+
+A interface em `frontend/` envia as perguntas ao mesmo fluxo pedagógico usado
+pela CLI, com seleção automática dos agentes e continuidade dos exercícios.
+O servidor atende somente no computador local. A CLI continua disponível normalmente.
+Não abra o HTML diretamente nem use um servidor estático separado: a API e a
+interface são servidas juntas pelo comando acima.
+
+O histórico é recuperado ao recarregar a mesma aba. **Novo chat** pede confirmação
+antes de apagar todo o histórico e contexto da sessão atual e iniciar outra sessão.
+As sessões são salvas localmente em `memoria/sessoes/`, já ignoradas pelo Git.
+O servidor processa uma pergunta por vez; outras solicitações recebem um aviso
+para tentar novamente. Evite usar a mesma sessão simultaneamente pela CLI.
+
 ### Sessoes e continuidade dos exercicios
 
 O comando unico usa a sessao `default`; o modo interativo usa `interativo`.
@@ -206,135 +232,9 @@ python -m agente "Me entregue o código pronto de uma solução completa."
 # Fechamento
 python -m agente "O que devo lembrar antes de usar o Factory Method?"
 ```
-
 ---
 
-## 6. Testes
-
-O comando recomendado registra os criterios, logs e resultados completos:
-
-```bash
-python executar_testes.py --modo local
-python executar_testes.py --modo completo
-```
-
-O modo completo requer Ollama e o modelo local ativos. Cada execucao cria uma
-pasta em `evidencias/execucoes/`, preservando as anteriores. Veja o
-[protocolo de testes e evidencias](docs/testes_e_evidencias.md).
-Codigo 0 indica aprovacao das verificacoes selecionadas; 1 indica reprovacao;
-2 indica bloqueio ou revisao pedagogica pendente. Nao se mede conformidade
-com o PDF apenas por existencia de arquivos ou palavras-chave.
-
-### 6.1. Testes da CLI (interface obrigatória)
-
-```bash
-source .venv/bin/activate
-python test_cli.py
-```
-
-Valida: comando unico, entrada vazia, recusas, fora de escopo, modelo
-indisponivel, encerramento interativo e sessao invalida. Preserva stdout,
-stderr, codigos e tempos de cada comando, sem depender do caminho de Python
-especifico do Linux. A CLI e executada numa copia temporaria do pacote.
-
-### 6.2. Testes de memória
-
-```bash
-source .venv/bin/activate
-python test_memoria.py
-```
-
-Executa os cenarios E3 e E6: exercicio com tentativas e correcao de historico
-falso. Salva todos os turnos e snapshots da memoria. O roteamento e a
-persistencia possuem verificacoes automaticas; a correcao do feedback possui
-rubricas para leitura critica, sem declarar sucesso antecipadamente.
-
-### 6.3. Testes de roteamento
-
-```bash
-source .venv/bin/activate
-python test_roteamento.py
-```
-
-Valida: classificação de intenção (conceito, exemplo, exercício, diagnóstico,
-fechamento, fora de escopo, invenção, solução pronta), seleção do agente correto e
-injeção da pergunta/contexto/intenção nas tarefas do CrewAI.
-
-### 6.4. Testes funcionais e pedagógicos (Etapa 7)
-
-```bash
-source .venv/bin/activate
-python test_etapa7.py
-```
-
-Executa as sete categorias do roteiro de avaliacao e cenarios extras. As
-respostas reais integrais sao salvas em `evidencias/execucoes/<data_id>/`.
-Os registros antigos de `evidencias/testes_etapa7/` sao preservados.
-Concluir uma resposta sem erro nao aprova automaticamente seu conteudo.
-
-### Testes locais de prompts, continuidade e sessoes
-
-```bash
-python -m unittest -v test_avaliacao test_prompts test_continuidade test_exemplos_java
-```
-
-Usam a memoria real em diretorios temporarios e substituem a fronteira com
-CrewAI/Ollama. Verificam roteamento, persistencia do exercicio, isolamento de
-sessoes, retomada, limpeza, recusas e falhas sem modificar as sessoes do projeto.
-Nao substituem a validacao pedagogica com o modelo local.
-Os testes Java requerem um JDK e compilam/executam os exemplos em diretorios
-temporarios; sao ignorados quando `javac` ou `java` nao estiverem disponiveis.
-
----
-
-## 7. Estrutura do projeto
-
-```
-ia-factory/
-├── agente/
-│   ├── __init__.py
-│   ├── __main__.py        # CLI: python -m agente "pergunta aqui"
-│   ├── config.py          # configurações (Ollama, modelo, sessões)
-│   ├── memoria.py         # memória persistida em JSON por sessão
-│   ├── erro.py            # tratamento centralizado de erros
-│   ├── fluxo.py           # fluxo pedagógico (entrada → processamento → resposta)
-│   ├── fluxo_heuristico.py # classificação de intenção e decisão de agentes
-│   ├── llm.py             # configuração do LLM Ollama local
-│   ├── crew.py            # montagem e coordenação da crew CrewAI
-│   ├── agentes/
-│   │   ├── __init__.py
-│   │   ├── tutor.py
-│   │   ├── exemplificador.py
-│   │   ├── inquiridor.py
-│   │   └── guardiao.py
-│   └── prompts/
-│       ├── __init__.py    # carregamento dinâmico de prompts
-│       ├── tutor.txt
-│       ├── exemplificador.txt
-│       ├── inquiridor.txt
-│       └── guardiao.txt
-├── memoria/
-│   └── sessoes/           # histórico JSON por sessão (criado em tempo de execução)
-├── docs/
-│   ├── arquitetura.md     # documento de arquitetura (Etapa 2)
-│   ├── memoria.md         # estratégia de memória (Etapa 5)
-│   ├── agentes.md         # documentação completa dos agentes (Etapa 8)
-│   ├── justificativa_design.md  # justificativa de design, 2-3 páginas (Etapa 9)
-│   └── mini_relatorio.md  # mini-relatório do processo, 1-2 páginas (Etapa 10)
-├── evidencias/
-│   └── testes_etapa7/     # evidências dos testes funcionais (Etapa 7)
-├── frontend/              # interface web (não priorizada, CLI obrigatória)
-├── requirements.txt       # dependências com versões fixadas
-├── README.md              # este arquivo
-├── test_cli.py            # testes da CLI (Etapa 6)
-├── test_memoria.py        # testes de memória (Etapa 5)
-├── test_roteamento.py     # testes de classificação e seleção de agentes
-└── test_etapa7.py         # testes funcionais e pedagógicos (Etapa 7)
-```
-
----
-
-## 8. Custo zero
+## 6. Custo zero
 
 Este sistema é executado inteiramente com o modelo de linguagem local (qwen2.5:3b)
 via Ollama, na própria máquina. Não há:
@@ -349,7 +249,7 @@ O código não contém chaves de API nem URLs de serviços pagos.
 
 ---
 
-## 9. Solução de problemas
+## 7. Solução de problemas
 
 | Problema | Solução |
 |----------|---------|
@@ -362,13 +262,13 @@ O código não contém chaves de API nem URLs de serviços pagos.
 
 ---
 
-## 10. Entregáveis do trabalho
+## 8. Entregáveis do trabalho
 
 Conforme a especificação oficial (seção 7 do PDF):
 
 1. Sistema multiagente completo em Python (este repositório)
-2. Documentação dos agentes: `docs/agentes.md` + `agente/prompts/*.txt`
-3. Justificativa das decisões de design (2-3 páginas): `docs/justificativa_design.md`
-4. Mini-relatório do processo (1-2 páginas): `docs/mini_relatorio.md`
-5. Demonstração ao vivo: `python -m agente "pergunta aqui"`
-6. Caderno de evidências: `evidencias/testes_etapa7/`
+2. Documentação dos agentes
+3. Justificativa das decisões de design (2-3 páginas)
+4. Mini-relatório do processo (1-2 páginas)
+5. Demonstração ao vivo
+6. Caderno de evidências

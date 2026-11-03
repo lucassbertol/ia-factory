@@ -1,9 +1,0 @@
-comando_unico: aprovado
-entrada_vazia: aprovado
-recusa_invencao: aprovado
-recusa_solucao: aprovado
-fora_escopo: aprovado
-modelo_indisponivel: reprovado
-interativo_sair: aprovado
-sessao_invalida: aprovado
-Evidencias CLI: /home/lucas-pc/ia-factory/evidencias/execucoes/20261103T195002Z_bcb8c6e8/cli

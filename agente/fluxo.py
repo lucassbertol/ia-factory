@@ -96,13 +96,20 @@ def executar_fluxo(pergunta: str, sessao_id: str = "default") -> ResultadoFluxo:
 
     # 2. Carrega memoria da sessao
     memoria = MemoriaConversa(sessao_id)
-    contexto = memoria.contexto_texto()
 
     # 3. Classifica a intenção
     intencao = classificar_intencao(
         pergunta,
         ultima_intencao=memoria.ultima_intencao,
         exercicio_pendente=bool(memoria.exercicio_pendente),
+    )
+    # O estado fica salvo para retomada; so enviamos o historico quando o
+    # pedido aponta para uma tentativa, continuacao ou referencia anterior.
+    contexto = (
+        memoria.contexto_texto(incluir_exercicio=(
+            intencao.tipo in {"avaliacao", "esclarecimento"} or "exerc" in pergunta.lower()
+        ))
+        if intencao.usar_contexto else ""
     )
 
     # 4. Detecta invenção de padrão (anti-alucinação)

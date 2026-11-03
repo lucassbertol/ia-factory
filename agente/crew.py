@@ -90,6 +90,45 @@ def montar_crew(
         if intencao
         else ""
     )
+    contratos = {
+        "selecao": (
+            "Responda diretamente quando usar e quando evitar Factory Method. "
+            "Apresente uma situacao concreta adequada e outra em que a hierarquia "
+            "seria desnecessaria, justificando ambas. Nao proponha atividade nem "
+            "retome um exercicio antigo. Nao gere codigo se nao foi solicitado."
+        ),
+        "comparacao": (
+            "Compare Factory Method com o padrao ou idioma citado; se nao foi "
+            "citado, use Simple Factory ou Abstract Factory. Explique a diferenca "
+            "de intencao e colaboracoes e o motivo da confusao. Responda antes "
+            "de qualquer pergunta guia. Nao proponha atividade nem reescreva "
+            "codigo anterior se isso nao foi pedido."
+        ),
+        "uso_incorreto": (
+            "Apresente um uso incorreto concreto, sua consequencia e como corrigir. "
+            "Distinga erro de aplicacao de uma alternativa valida mais simples. "
+            "Nao entregue apenas um exemplo correto e nao proponha atividade. "
+            "Se mostrar Java, explique o erro e a correcao sem duplicar programas."
+        ),
+        "diagnostico": (
+            "Identifique a duvida ou o equivoco do estudante e esclareca-o "
+            "diretamente. Nao proponha atividade nova. Faca somente uma pergunta "
+            "guia, se ainda faltar informacao para diagnosticar."
+        ),
+        "esclarecimento": (
+            "O estudante deu uma resposta curta ou pediu esclarecimento durante "
+            "a atividade. Use o enunciado e a ultima pergunta para explicar ou "
+            "pedir que detalhe o raciocinio. Nao julgue acerto sem tentativa "
+            "identificavel, nao proponha outra atividade e nao entregue a solucao."
+        ),
+    }
+    contrato = contratos.get(intencao, "")
+    if contrato:
+        bloco_intencao += f"Contrato do turno atual: {contrato}\n\n"
+    bloco_intencao += (
+        "A pergunta atual tem prioridade sobre o historico. Um exercicio salvo "
+        "nao transforma um pedido independente em tentativa de resposta.\n\n"
+    )
 
     # Somente tarefas de exemplo recebem codigo: nao antecipar uma solucao
     # durante a pratica socratica. O Guardiao recebe a mesma fonte para revisar.
@@ -166,6 +205,29 @@ def montar_crew(
         ),
     }.get(intencao, "")
 
+    instrucao_tutor = contrato or (
+        "Responda a pergunta do estudante acima apresentando o conceito "
+        "do padrao Factory Method: intencao, problema resolvido, participantes, "
+        "estrutura UML e consequencias. Se a pergunta for sobre um aspecto "
+        "especifico, foque nesse aspecto sem repetir tudo o que ja foi dito."
+    )
+    instrucao_exemplificador = contrato or (
+        "Responda a pergunta do estudante acima fornecendo um exemplo correto "
+        "e idiomatico em Java do padrao Factory Method, explicando por que "
+        "funciona e adaptando ao nivel do estudante."
+    )
+    instrucao_inquiridor = contrato or orientacao_inquiridor or (
+        "Proponha um exercicio pratico de Factory Method, aguardando a tentativa "
+        "do estudante antes de avaliar e orientar a correcao."
+    )
+    saida_especifica = {
+        "selecao": "Situacao de uso, situacao de evitacao e justificativa de cada uma.",
+        "comparacao": "Diferencas entre os padroes e motivo da confusao, sem atividade nova.",
+        "uso_incorreto": "Erro concreto, consequencia e correcao explicados.",
+        "diagnostico": "Esclarecimento da duvida ou diagnostico fundamentado, sem atividade nova.",
+        "esclarecimento": "Esclarecimento ou pedido de raciocinio, sem presumir acerto.",
+    }.get(intencao)
+
     tarefas: list[Task] = []
     tarefa_anterior: Task | None = None
 
@@ -177,15 +239,11 @@ def montar_crew(
                 f"{bloco_pergunta}"
                 f"{bloco_contexto}"
                 f"{bloco_intencao}"
-                "Responda a pergunta do estudante acima apresentando o conceito "
-                "do padrao Factory Method: intencao, problema resolvido, "
-                "participantes, estrutura UML e consequencias. "
-                "Se a pergunta for sobre um aspecto especifico, foque nesse aspecto "
-                "sem repetir tudo o que ja foi dito no historico. "
+                f"{instrucao_tutor} "
                 "Use o prompt de sistema do tutor como referencia.\n\n"
                 f"{orientacao_tutor}"
             ),
-            expected_output="Explicação clara e focada na pergunta do estudante, em português do Brasil.",
+            expected_output=saida_especifica or "Explicação clara e focada na pergunta do estudante, em português do Brasil.",
             agent=agents_crewai["tutor"],
         )
         tarefas.append(tarefa_tutor)
@@ -199,13 +257,11 @@ def montar_crew(
                 f"{bloco_pergunta}"
                 f"{bloco_contexto}"
                 f"{bloco_intencao}"
-                "Responda a pergunta do estudante acima fornecendo um exemplo "
-                "correto e idiomatico em Java do padrao Factory Method, "
-                "explicando por que funciona e adaptando ao nivel do estudante. "
+                f"{instrucao_exemplificador} "
                 "Use o prompt do exemplificador como referencia."
                 f"{bloco_exemplos}"
             ),
-            expected_output="Exemplo em Java com explicacao, em portugues do Brasil.",
+            expected_output=saida_especifica or "Exemplo em Java com explicacao, em portugues do Brasil.",
             agent=agents_crewai["exemplificador"],
             context=[tarefa_anterior] if tarefa_anterior else [],
         )
@@ -220,15 +276,11 @@ def montar_crew(
                 f"{bloco_pergunta}"
                 f"{bloco_contexto}"
                 f"{bloco_intencao}"
-                "Responda a pergunta do estudante acima conduzindo a pratica de "
-                "forma socratica: proponha um exercicio pratico (ou avalie a "
-                "resposta do estudante, se houver), detecte conceitos equivocados "
-                "(ex.: confundir Factory Method com Simple Factory ou Abstract "
-                "Factory) e oriente a correcao com perguntas guia. "
+                f"{instrucao_inquiridor} "
                 "Use o prompt do inquiridor como referencia.\n\n"
                 f"{orientacao_inquiridor}"
             ),
-            expected_output="Exercicio, avaliacao e feedback socratico em portugues do Brasil.",
+            expected_output=saida_especifica or "Exercicio, avaliacao e feedback socratico em portugues do Brasil.",
             agent=agents_crewai["inquiridor"],
             context=[tarefa_anterior] if tarefa_anterior else [],
         )
@@ -256,7 +308,7 @@ def montar_crew(
                 f"{orientacao_guardiao}"
                 f"{bloco_exemplos}"
             ),
-            expected_output="Resposta consolidada ao estudante, sem meta-comentarios, em portugues do Brasil.",
+            expected_output=saida_especifica or "Resposta consolidada ao estudante, sem meta-comentarios, em portugues do Brasil.",
             agent=agents_crewai["guardiao"],
             context=[tarefa_anterior] if tarefa_anterior else [],
         )

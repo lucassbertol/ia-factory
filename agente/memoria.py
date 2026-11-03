@@ -69,7 +69,7 @@ class MemoriaConversa:
             json.dump(self._historico, f, ensure_ascii=False, indent=2)
         tmp.replace(self.caminho)
 
-    def contexto_texto(self) -> str:
+    def contexto_texto(self, incluir_exercicio: bool = True) -> str:
         """Retorna o historico recente como texto para injeção nos prompts.
 
         So os ultimos turnos sao usados, respeitando MAX_CONTEXTO_CARACTERES,
@@ -79,7 +79,7 @@ class MemoriaConversa:
             return ""
         limite = max(0, MAX_CONTEXTO_CARACTERES)
         cabecalho = "=== Historico da conversa (sessao " + self.sessao_id + ") ===\n"
-        if self.exercicio_pendente:
+        if incluir_exercicio and self.exercicio_pendente:
             # Reserva espaco para o enunciado mesmo apos varios feedbacks.
             cabecalho += "Exercicio em andamento (avalie a tentativa com base nele):\n"
             cabecalho += self.exercicio_pendente[:limite // 2] + "\n\n"
@@ -98,6 +98,11 @@ class MemoriaConversa:
             partes.insert(0, bloco)
             disponivel -= len(bloco)
         return cabecalho + "".join(partes)
+
+    @property
+    def historico(self) -> list[dict[str, Any]]:
+        """Retorna os turnos para exibicao, sem expor a lista interna mutavel."""
+        return [turno.copy() for turno in self._historico]
 
     @property
     def ultima_intencao(self) -> str:

@@ -42,56 +42,11 @@ body {
     var(--bg);
 }
 
-.overlay {
-  display: none;
-}
-
-/* ---------- Sidebar ---------- */
-.sidebar {
-  width: 280px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 18px 14px;
-  background: var(--bg-soft);
-  border-right: 1px solid var(--border-soft);
-  z-index: 30;
-}
-
-.sidebar-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 6px;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 700;
-  font-size: 15px;
-  letter-spacing: -0.01em;
-}
-
-.brand-mark {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
-  background: linear-gradient(135deg, #fafafa, #a1a1aa);
-  color: #09090b;
-  font-size: 15px;
-}
-
 .new-chat-btn {
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
-  padding: 11px 14px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--panel);
@@ -124,11 +79,6 @@ body {
   flex-shrink: 0;
 }
 
-.brand-mark .icon {
-  width: 16px;
-  height: 16px;
-}
-
 .welcome-mark .icon {
   width: 24px;
   height: 24px;
@@ -155,6 +105,7 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  width: 100%;
 }
 
 .topbar {
@@ -220,7 +171,7 @@ body {
   color: var(--text);
 }
 
-.menu-btn, .sidebar-close { display: none; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; }
 
 /* ---------- Messages ---------- */
 .messages {
@@ -264,6 +215,31 @@ body {
   font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1.15;
+}
+
+.welcome p { color: var(--text-muted); line-height: 1.6; }
+.team-label { font-size: 13px; }
+.pulse-dot.is-error { background: #f59e0b; box-shadow: none; animation: none; }
+.new-chat-btn:disabled, .icon-btn:disabled { opacity: 0.4; cursor: wait; }
+.msg-error .bubble { border-color: #7f3434; color: #fecaca; }
+.msg-ai .bubble { display: block; white-space: normal; }
+.bubble p { margin: 0 0 12px; white-space: pre-wrap; }
+.bubble p:last-child { margin-bottom: 0; }
+.bubble h3 { margin: 18px 0 10px; font-size: 15px; line-height: 1.5; }
+.bubble h3:first-child { margin-top: 0; }
+.bubble ul, .bubble ol { margin: 8px 0 12px; padding-left: 23px; }
+.bubble li { margin-bottom: 6px; }
+.bubble code { font-family: ui-monospace, Consolas, monospace; font-size: 0.9em; }
+.bubble :not(pre) > code { background: #27272a; padding: 2px 5px; border-radius: 4px; }
+.code-block { margin: 12px 0; border: 1px solid #34343b; border-radius: 9px; overflow: hidden; }
+.code-label { padding: 6px 12px; background: #222228; color: var(--text-muted); font-size: 12px; }
+.code-block pre { margin: 0; padding: 14px; overflow-x: auto; background: #09090b; white-space: pre; }
+.code-block code { background: transparent; padding: 0; }
+.composer-box textarea { min-width: 0; }
+:focus-visible { outline: 2px solid #a1a1aa; outline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
 
 /* Bolhas de mensagem */
@@ -528,32 +504,27 @@ body {
 
 /* ---------- Responsivo ---------- */
 @media (max-width: 860px) {
-  .menu-btn { display: grid; }
-  .sidebar-close { display: grid; }
-
-  .sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    transform: translateX(-102%);
-    transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
-    box-shadow: var(--shadow);
-  }
-
-  .sidebar.open { transform: translateX(0); }
-
-  .overlay.show {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(2px);
-    z-index: 20;
-  }
-
   .messages { padding: 24px 14px 14px; }
   .composer-wrap { padding: 8px 14px 14px; }
   .composer-hint { display: none; }
   .topbar { padding: 12px 14px; }
 }
+
+/* Confirmação de novo chat */
+.confirm-dialog {
+  width: min(460px, calc(100% - 32px));
+  padding: 26px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+.confirm-dialog::backdrop { background: rgba(0, 0, 0, 0.72); }
+.confirm-dialog h2 { margin: 0 0 12px; font-size: 20px; }
+.confirm-dialog p { margin: 0; color: var(--text-muted); font-size: 14px; line-height: 1.6; }
+.confirm-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+.confirm-actions button { padding: 10px 14px; border-radius: 9px; font: 500 13px var(--font); cursor: pointer; }
+.dialog-cancel { border: 1px solid var(--border); background: var(--panel-2); color: var(--text); }
+.dialog-confirm { border: 1px solid #f87171; background: #f87171; color: #180808; }
+.confirm-actions button:hover { filter: brightness(1.12); }
