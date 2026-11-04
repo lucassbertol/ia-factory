@@ -9,6 +9,7 @@
   const input = $("input");
   const sendBtn = $("sendBtn");
   const newChatBtn = $("newChatBtn");
+  const suggestionList = $("suggestionList");
   const SESSION_KEY = "factory_method_sessao";
   let thread = null;
   let busy = true;
@@ -39,10 +40,19 @@
   function controles() {
     sendBtn.disabled = busy || input.value.trim().length === 0;
     newChatBtn.disabled = busy;
+    suggestionList.querySelectorAll("button").forEach((button) => { button.disabled = busy; });
     form.setAttribute("aria-busy", String(busy));
     input.style.height = "auto";
     input.style.height = `${Math.min(input.scrollHeight, 160)}px`;
   }
+
+  suggestionList.addEventListener("click", (event) => {
+    const option = event.target.closest(".suggestion-option");
+    if (!option || busy) return;
+    input.value = option.dataset.pergunta;
+    controles();
+    input.focus();
+  });
 
   input.addEventListener("input", controles);
   input.addEventListener("keydown", (event) => {

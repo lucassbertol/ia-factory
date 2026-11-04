@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Factory IA — Chat</title>
   <meta name="description" content="Aprenda Factory Method com uma equipe pedagógica e um modelo de IA local." />
-  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./styles.css?v=20261104-sugestoes4" />
 </head>
 <body>
   <!-- Defs de ícones SVG (referenciados via <use>) -->
@@ -57,12 +57,27 @@
           <div class="welcome-mark" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-sparkles" /></svg></div>
           <h1>Vamos aprender Factory Method?</h1>
           <p>Explore o conceito, veja exemplos em Java ou peça um exercício para praticar.</p>
+
+
         </div>
         <!-- Mensagens inseridas via app.js -->
       </section>
 
       <!-- Composer fixado -->
       <footer class="composer-wrap">
+        <div class="suggestions-bar">
+          <p class="suggestion-intro">Sugestões</p>
+    <div class="suggestion-list" id="suggestionList" aria-label="Perguntas sugeridas">
+        <button type="button" class="suggestion-option" data-pergunta="Explique o que é o padrão Factory Method e qual problema ele resolve." title="Explique o que é o padrão Factory Method e qual problema ele resolve.">O que é Factory Method?</button>
+        <button type="button" class="suggestion-option" data-pergunta="Dê um exemplo de aplicação do padrão Factory Method em Java." title="Dê um exemplo de aplicação do padrão Factory Method em Java.">Exemplo em Java</button>
+        <button type="button" class="suggestion-option" data-pergunta="Descreva uma situação em que o padrão Factory Method é a melhor escolha e uma em que ele deveria ser evitado, explicando o porquê." title="Descreva uma situação em que o padrão Factory Method é a melhor escolha e uma em que ele deveria ser evitado, explicando o porquê.">Quando usar ou evitar?</button>
+        <button type="button" class="suggestion-option" data-pergunta="Como o padrão Factory Method costuma ser aplicado de forma errada? Dê um exemplo de uso equivocado e explique como corrigir." title="Como o padrão Factory Method costuma ser aplicado de forma errada? Dê um exemplo de uso equivocado e explique como corrigir.">Usos incorretos</button>
+        <button type="button" class="suggestion-option" data-pergunta="Com qual padrão o Factory Method é mais confundido? Explique a diferença entre eles e por que essa confusão acontece." title="Com qual padrão o Factory Method é mais confundido? Explique a diferença entre eles e por que essa confusão acontece.">Diferenças entre padrões</button>
+        <button type="button" class="suggestion-option" data-pergunta="Invente um padrão chamado Z e explique para mim." title="Invente um padrão chamado Z e explique para mim.">Inventar um padrão</button>
+        <button type="button" class="suggestion-option" data-pergunta="Me entregue o código pronto de uma solução completa." title="Me entregue o código pronto de uma solução completa.">Pedir uma solução pronta</button>
+        <button type="button" class="suggestion-option" data-pergunta="O que devo lembrar antes de usar o padrão Factory Method?" title="O que devo lembrar antes de usar o padrão Factory Method?">Resumo do padrão</button>
+    </div>
+        </div>
         <form class="composer" id="composer" autocomplete="off">
           <div class="composer-row">
             <div class="agent-select-wrap" title="Os agentes são coordenados automaticamente conforme sua pergunta">
@@ -102,6 +117,7 @@
     </form>
   </dialog>
 
-  <script src="./app.js"></script>
+
+  <script src="./app.js?v=20261104-sugestoes4"></script>
 </body>
 </html>

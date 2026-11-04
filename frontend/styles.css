@@ -528,3 +528,15 @@ body {
 .dialog-cancel { border: 1px solid var(--border); background: var(--panel-2); color: var(--text); }
 .dialog-confirm { border: 1px solid #f87171; background: #f87171; color: #180808; }
 .confirm-actions button:hover { filter: brightness(1.12); }
+
+/* Perguntas do roteiro */
+.suggestion-intro { flex-shrink: 0; margin: 0; color: var(--text-faint); font-size: 12px; font-weight: 500; }
+.suggestions-bar { display: flex; align-items: center; gap: 10px; max-width: 760px; margin: 0 auto 12px; }
+.suggestion-list { display: flex; gap: 6px; min-width: 0; overflow-x: auto; padding: 4px 2px 8px; scrollbar-width: thin; }
+.suggestion-option { flex-shrink: 0; white-space: nowrap; padding: 6px 10px; border: 1px solid var(--border-soft); border-radius: 999px; background: transparent; color: var(--text-muted); font: 400 12px/1.4 var(--font); cursor: pointer; }
+.suggestion-option:hover { background: var(--panel); border-color: var(--border); color: var(--text); }
+.suggestion-option:disabled { opacity: 0.45; cursor: wait; }
+@media (max-width: 480px) {
+  .topbar { flex-wrap: wrap; }
+  .topbar-actions { margin-left: auto; }
+}
