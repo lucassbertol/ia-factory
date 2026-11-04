@@ -131,8 +131,8 @@ def _contrato(plano: PlanoTurno, autor: str) -> str:
             "Responda quando usar e quando evitar o Factory Method, em no máximo 250 palavras. "
             "(1) Uma situação concreta em que ele é a melhor escolha: há vários tipos de produto "
             "e a lista deve crescer. (2) Uma situação em que deve ser evitado: existe UM ÚNICO "
-            "tipo de produto e nenhuma variação prevista, então criar Creator e subclasses só "
-            "acrescenta classes. Justifique as duas com um domínio de exemplo seu, sem usar as "
+            "tipo de produto e nenhuma variação prevista, então basta instanciar a classe "
+            "diretamente, sem Creator nem subclasses. Justifique as duas com um domínio de exemplo seu, sem usar as "
             "classes dos exemplos da referência (Notificador, Email, Sms, Relatorio). "
             "Não proponha exercício."
         )
@@ -221,6 +221,10 @@ def _exigencias(plano: PlanoTurno, autor: str) -> Exigencias:
     elif plano.intencao in {"exemplo", "uso_incorreto"} and autor == "exemplificador":
         ex.termos_obrigatorios = [("Notificador", "Relatorio", "avisar", "gerar", "criarNotificacao", "criarExportador")]
         ex.descricao_termos = "Explique o código mostrado, citando as classes e métodos dele."
+        # Na quinta coleta ele respondeu o próprio desafio (WhatsApp) e disse ter
+        # "adicionado" código. O desafio é do estudante.
+        ex.proibidos = [(r"whats ?app|notificadorwhats|notificacaowhats",
+                         "Não responda o desafio (adicionar um produto novo): só proponha-o ao estudante.")]
     elif plano.intencao == "exercicio":
         ex.termos_obrigatorios = [("?",)]
         ex.descricao_termos = "Termine o exercício com uma pergunta guia."

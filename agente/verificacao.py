@@ -72,6 +72,9 @@ class Exigencias:
     termos_obrigatorios: list[tuple[str, ...]] = field(default_factory=list)
     descricao_termos: str = ""
     max_caracteres: int = MAX_CARACTERES_RESPOSTA
+    # (expressão, mensagem): conteúdo que não deve aparecer neste turno; na
+    # segunda tentativa, as frases que casam são removidas.
+    proibidos: list[tuple[str, str]] = field(default_factory=list)
 
 
 # Linhas de "bastidor" que o modelo pequeno às vezes escreve (observadas no
@@ -127,6 +130,9 @@ _FRASE_META = re.compile(
     r"|(?:que|o que) voce me mostrou"
     r"|\bouvi voce\b"
     r"|\bcomo guia, pergunte\b"
+    r"|aqui esta uma pergunta"
+    r"|\badicionei (?:a|uma|o|um)\b"
+    r"|sistema multiagente|\bos agentes\b|\breferencia local\b"
 )
 
 
@@ -220,6 +226,9 @@ def encontrar_problemas(texto: str, exigencias: Exigencias) -> list[str]:
         problemas.append("A resposta repete as mesmas frases; escreva cada ideia uma única vez.")
     if len(_INGLES.findall(limpo)) > 12:
         problemas.append("Responda em português do Brasil.")
+    for expressao, mensagem in exigencias.proibidos:
+        if re.search(expressao, norm):
+            problemas.append(mensagem)
     for alternativas in exigencias.termos_obrigatorios:
         if not any(_normaliza(t) in norm for t in alternativas):
             problemas.append(exigencias.descricao_termos or f"Mencione {alternativas[0]}.")
@@ -227,11 +236,53 @@ def encontrar_problemas(texto: str, exigencias: Exigencias) -> list[str]:
     return problemas
 
 
+def _remover_frases(texto: str, expressoes: list[str]) -> str:
+    linhas = []
+    for linha in texto.splitlines():
+        frases = re.split(r"(?<=[.!?])\s+", linha)
+        mantidas = [f for f in frases if not any(re.search(e, _normaliza(f)) for e in expressoes)]
+        if mantidas or not linha.strip():
+            linhas.append(" ".join(mantidas))
+    return "\n".join(linhas).strip()
+
+
+def remover_introducoes_penduradas(texto: str) -> str:
+    """Remove parágrafos que anunciam algo ("a saída será:") sem nada depois."""
+    paragrafos = texto.split("\n\n")
+    mantidos = []
+    for i, paragrafo in enumerate(paragrafos):
+        seguinte = paragrafos[i + 1].lstrip() if i + 1 < len(paragrafos) else ""
+        anuncia = paragrafo.rstrip().endswith(":") and "\n" not in paragrafo.strip()
+        if anuncia and not re.match(r"(?:[-*•]|\d+[.)]|```|\|)", seguinte):
+            continue
+        mantidos.append(paragrafo)
+    return "\n\n".join(mantidos)
+
+
+def limitar_tamanho(texto: str, maximo: int) -> str:
+    """Corta parágrafos excedentes, mantendo a pergunta final ao estudante."""
+    if len(texto) <= maximo:
+        return texto
+    paragrafos = texto.split("\n\n")
+    final = paragrafos[-1] if paragrafos[-1].rstrip().endswith("?") else ""
+    corpo, total = [], len(final)
+    for paragrafo in paragrafos[:-1] if final else paragrafos:
+        if total + len(paragrafo) > maximo and corpo:
+            break
+        corpo.append(paragrafo)
+        total += len(paragrafo) + 2
+    return "\n\n".join(corpo + ([final] if final else []))
+
+
 def corrigir_mecanicamente(texto: str, exigencias: Exigencias) -> str:
     texto = remover_meta_revisao(texto)
     if exigencias.sem_codigo:
         texto = remover_blocos_de_codigo(texto)
-    return cortar_frase_incompleta(remover_repeticoes(remover_frases_erradas(texto)))
+    texto = remover_frases_erradas(texto)
+    if exigencias.proibidos:
+        texto = _remover_frases(texto, [e for e, _ in exigencias.proibidos])
+    texto = remover_introducoes_penduradas(remover_repeticoes(texto))
+    return cortar_frase_incompleta(limitar_tamanho(texto, exigencias.max_caracteres))
 
 
 def premissas_falsas(pergunta: str) -> list[str]:

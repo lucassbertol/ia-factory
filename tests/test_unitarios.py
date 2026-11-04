@@ -231,6 +231,20 @@ class TestCasosDoTesteReal(unittest.TestCase):
             "Vamos analisar o código verificado que você me mostrou. Notificador é o Creator.",
             Exigencias()), "Notificador é o Creator.")
 
+    def test_coleta_5_forma(self):
+        texto = ("Notificador é o Creator.\n\nComo resultado, a saída será:\n\nIsso mostra o padrão.\n\n"
+                 "Adicionei a implementação da classe Whatsapp.\n\nAqui está uma pergunta curta que convida "
+                 "o estudante a continuar:\n\nComo isso afeta a implementação em seu sistema multiagente?\n\n"
+                 "O que você criaria para um produto novo?")
+        limpo = corrigir_mecanicamente(texto, Exigencias(proibidos=[(r"whats ?app", "x")]))
+        self.assertEqual(limpo, "Notificador é o Creator.\n\nIsso mostra o padrão.\n\n"
+                                "O que você criaria para um produto novo?")
+        longo = "\n\n".join(["Parágrafo explicativo número %d com algum conteúdo." % i for i in range(80)]
+                             + ["Ficou claro?"])
+        cortado = corrigir_mecanicamente(longo, Exigencias(max_caracteres=600))
+        self.assertLessEqual(len(cortado), 650)
+        self.assertTrue(cortado.endswith("Ficou claro?"))
+
     def test_premissa_falsa_na_pergunta(self):
         self.assertTrue(premissas_falsas(
             "Por que o Creator do Factory Method precisa obrigatoriamente ser uma classe abstrata?"))

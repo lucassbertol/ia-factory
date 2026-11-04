@@ -125,7 +125,7 @@ sem internet depois de instalado; para conferir, desligue a rede e execute uma p
 ## 5. Testes
 
 ```bash
-python -m unittest -v tests.test_unitarios      # 39 testes, sem o modelo real (~20 s)
+python -m unittest -v tests.test_unitarios      # 40 testes, sem o modelo real (~20 s)
 python tests/test_perguntas_pdf.py --extras     # roteiro + 6 casos-limite com o modelo real
 ```
 

@@ -6,7 +6,7 @@
 python -m unittest -v tests.test_unitarios
 ```
 
-39 testes que usam um Ollama simulado (`ollama_simulado.py`): ele devolve respostas
+40 testes que usam um Ollama simulado (`ollama_simulado.py`): ele devolve respostas
 roteirizadas por agente e registra cada requisição. Cobrem roteamento e barreiras
 anti-alucinação, recusas, guardrails, veredito do Guardião e reescrita opcional, parâmetros enviados ao
 Ollama (num_ctx, temperatura), falhas do Ollama, memória, prompts (seções do Anexo B), CLI e os
