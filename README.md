@@ -224,6 +224,31 @@ aprovação permite a entrega. Nova reprovação, dúvida, formato inválido, cr
 sem evidência ou falha técnica nessa rodada resultam numa orientação fixa de
 impossibilidade de validação, sem exibir os rascunhos.
 
+**Exceção: avaliação de tentativas do exercício.** O Guardião não recebe o
+gabarito, então não consegue decidir se a avaliação do Inquiridor está certa. No
+teste da interface web (04/11), ele julgou a tentativa do estudante em vez do texto
+do Inquiridor, as críticas foram descartadas por falta de evidência e as duas
+avaliações de "o product seria o recibo" foram bloqueadas. Por isso, nas intenções
+`avaliacao` e `esclarecimento`, um INCONCLUSIVO não bloqueia: decide a validação
+automática, que inclui a verificação de que o gabarito não foi revelado (citar
+mais de dois nomes reservados do gabarito, como `EmissorPdf` ou `criarRecibo`,
+que o estudante ainda não usou). Uma reprovação fundamentada continua bloqueando.
+O turno fica marcado com `revisao.entregue_sem_aprovacao`.
+
+**Avaliação verificada dos três exercícios do banco** (`agente/avaliacao_exercicio.py`).
+No mesmo teste, o Inquiridor copiou o começo do gabarito e, diante de uma tentativa
+toda correta, inventou equívocos. Agora o sistema confere a tentativa sem modelo,
+parte por parte (Product, ConcreteProducts, Creator, ConcreteCreators e a extensão
+para HTML), aceitando nomes diferentes dos do gabarito quando o papel está certo.
+Os outros dois exercícios têm a mesma conferência: "é Factory Method?" (existe
+subclasse sobrescrevendo? ela está certa? como transformar?) e "estender o exemplo"
+(produto novo, criador novo, o que muda). No teste web, à resposta correta "Não, não
+existe nenhuma subclasse sobrescrevendo...", o modelo tinha respondido "Não está correto".
+O resultado vai ao Inquiridor (e ao Guardião) como fato verificado; o gabarito não
+é mais enviado ao modelo. O sistema define a próxima pergunta e, se o texto do
+modelo falhar na validação (por exemplo, apontando um erro que não existe), entrega
+o retorno verificado em vez da mensagem de "não consegui validar".
+
 A sessão registra as decisões e tentativas em `revisao`; o campo `resposta`
 contém apenas o texto entregue. Um exemplo bloqueado não conta como mostrado; turnos bloqueados não contam
 como tópicos estudados nem encerram o exercício pendente.

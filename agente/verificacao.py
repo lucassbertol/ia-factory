@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import re
+from difflib import SequenceMatcher
 import unicodedata
 from dataclasses import dataclass, field
 
@@ -61,6 +62,15 @@ _AFIRMACOES_ERRADAS = [
      "Strategy funciona por composição: o Context recebe uma Strategy e pode trocá-la; não é sobrescrita em subclasses."),
     (r"(?:email|sms)\b[^.]{0,30}\bsao responsave\w* (?:por|pela) (?:implementar )?(?:essa |a )?cria",
      "Email e Sms são ConcreteProducts: quem cria são os ConcreteCreators (NotificadorEmail, NotificadorSms)."),
+    # Interface web, 04/11: "O código de configuração (como no main) não precisa
+    # mudar" ao adicionar um produto. O main escolhe o ConcreteCreator e muda.
+    (r"\b(?:main|codigo de configuracao)(?:\s*\([^)]*\))?\s+(?:tambem\s+)?(?:nao|nunca)\s+"
+     r"(?:precisa|precisara|vai precisar|tem que|necessita|sera|e)\w*\s+(?:de\s+)?(?:ser\s+)?"
+     r"(?:mud|alter|modific|mexid|toc)\w*"
+     r"|\bnem o (?:main|codigo de configuracao) precisa\w* (?:de )?(?:ser )?(?:mud|alter|modific)\w*"
+     r"|\bsem (?:precisar |ter que )?(?:mudar|alterar|modificar|mexer)(?: em| no)? (?:o )?(?:main|codigo de configuracao)\b",
+     "Ao adicionar um produto, o código de configuração (o main) muda para escolher o novo "
+     "ConcreteCreator; o que não muda é o Creator e o código que usa o contrato Product."),
     (r"https?://", "Não cite links: use apenas a referência local."),
 ]
 
@@ -78,6 +88,125 @@ class Exigencias:
     # (expressão, mensagem): conteúdo que não deve aparecer neste turno; na
     # segunda tentativa, as frases que casam são removidas.
     proibidos: list[tuple[str, str]] = field(default_factory=list)
+    # Nomes do gabarito que o estudante ainda não citou. Na avaliação de uma
+    # tentativa, citar mais de `max_reservados` deles é entregar a solução.
+    reservados: list[str] = field(default_factory=list)
+    max_reservados: int = 2
+    # O que o estudante escreveu no exercício. Quando preenchido, frases que lhe
+    # atribuem um erro ou uma definição sobre algo que ele não citou são barradas.
+    fala_estudante: str = ""
+    # Respostas já dadas pelo sistema neste exercício: repetir uma delas é ignorar
+    # a tentativa nova.
+    respostas_anteriores: list[str] = field(default_factory=list)
+    # A avaliação verificada não achou equívoco: o texto não pode apontar erros.
+    sem_equivocos: bool = False
+
+
+# Termos que o Inquiridor pode atribuir ao estudante sem que ele os tenha usado.
+_TERMOS_TENTATIVA = (
+    r"concrete ?products?", r"concrete ?creators?", r"creator", r"product", r"factory method",
+    r"metodo fabrica", r"emitir", r"criar\w+", r"if", r"switch", r"static", r"subclasses?",
+    r"interface", r"heranca", r"sobrescr\w*",
+)
+_ATRIBUI_ERRO = re.compile(r"\b(?:equivoc\w*|erro|errou|errad[oa]|incorret\w*|engano)\b")
+_ATRIBUI_FALA = re.compile(
+    r"\b(?:voce|vc)\s+(?:\w+\s+)?(?:descreveu|mencionou|disse|definiu|colocou|escreveu|usou|"
+    r"propos|sugeriu|citou|indicou|identificou|confundiu|esqueceu)\b"
+    r"|\b(?:sua|na sua|da sua) (?:definicao|descricao|resposta (?:sobre|para) o)"
+)
+
+
+def frases_com_equivoco(texto: str) -> list[str]:
+    """Frases que afirmam um erro ou pedem ajuste (sem negação nem tom de alerta)."""
+    encontradas = []
+    for frase in re.split(r"(?<=[.!?])\s+|\n+", texto):
+        norm = _normaliza(frase)
+        # Teste web de 04/11: "Não está correto." para uma resposta certa.
+        afirma = (_ATRIBUI_ERRO.search(norm) or re.search(r"\b(?:ajust|corrig)\w*", norm)
+                  or re.search(r"\bnao (?:esta|e|eh|ficou|parece) (?:muito |bem |totalmente )?(?:corret|cert)\w*"
+                               r"|\bnao (?:e|eh) bem (?:isso|assim)", norm))
+        negada = re.search(r"\b(?:nao ha|sem|nenhum|nao (?:tem|houve|cometeu|precisa))\b"
+                           r"|\bnao (?:esta|e|eh) (?:errad|incorret)", norm)
+        alerta = re.search(r"\b(?:erros? comu\w*|cuidado|evite|atencao)\b", norm)
+        if afirma and not negada and not alerta:
+            encontradas.append(frase.strip())
+    return encontradas
+
+
+def repete_resposta(texto: str, anterior: str) -> bool:
+    """Texto quase igual a uma resposta anterior (cópia do histórico)."""
+    a, b = _chave_frase(texto), _chave_frase(anterior)
+    # Repetir só uma pergunta curta ("Quem seria o Creator?") não é cópia.
+    if len(a.split()) < 15 or len(b.split()) < 15:
+        return False
+    if SequenceMatcher(None, a, b).ratio() >= 0.75:
+        return True
+    frases = lambda t: {_chave_frase(f) for f in re.split(r"(?<=[.!?])\s+", t)
+                        if len(_chave_frase(f).split()) >= 6}
+    comuns = frases(texto) & frases(anterior)
+    return len(comuns) >= 2 and len(comuns) >= len(frases(texto)) / 2
+
+
+def _termos(trecho: str) -> list[str]:
+    return [t for t in _TERMOS_TENTATIVA if re.search(rf"\b{t}\b", trecho)]
+
+
+def frases_atribuidas(texto: str, fala_estudante: str) -> list[str]:
+    """Frases que dizem que o estudante errou ou definiu algo que ele não escreveu.
+
+    Teste web de 04/11: à tentativa "o product seria o recibo", o Inquiridor
+    respondeu "há um equívoco na definição dos ConcreteProducts e do Creator" e
+    falou de um if em emitir() "que você descreveu": nada disso foi escrito.
+    Cada oração que acusa um erro ou cita uma fala do estudante precisa tratar de
+    pelo menos um termo que ele usou.
+    """
+    fala = _normaliza(fala_estudante)
+    encontradas = []
+    for frase in re.split(r"(?<=[.!?])\s+|\n+", texto):
+        norm = _normaliza(frase)
+        if re.search(r"\b(?:erros? comu\w*|cuidado|evite|atencao)\b", norm):
+            continue
+        for oracao in re.split(r"[,;:]|\b(?:mas|porem|no entanto|entretanto)\b", norm):
+            negada = re.search(r"\b(?:nao ha|sem|nenhum|nao (?:tem|houve|cometeu))\b", oracao)
+            atribui = (_ATRIBUI_ERRO.search(oracao) and not negada) or _ATRIBUI_FALA.search(oracao)
+            termos = _termos(oracao)
+            if atribui and termos and not any(re.search(rf"\b{t}\b", fala) for t in termos):
+                encontradas.append(frase.strip())
+                break
+    return encontradas
+
+
+_PAPEIS = {"concreteproduct", "concreteproducts", "concretecreator", "concretecreators",
+           "factorymethod", "simplefactory", "abstractfactory", "gof"}
+
+
+def nomes_reservados(gabarito: str, ja_citado: str) -> list[str]:
+    """Classes e métodos do gabarito (ReciboPdf, criarRecibo...) ainda não citados
+    pelo estudante nem pelo enunciado. Nomes de papéis do padrão não contam."""
+    citado = _normaliza(ja_citado)
+    nomes = re.findall(r"\b(?:[A-Z][a-z0-9]+(?:[A-Z][a-z0-9]*)+|[a-z]+[A-Z]\w*)\b", gabarito)
+    return [n for n in dict.fromkeys(nomes)
+            if n.lower() not in _PAPEIS and not re.search(rf"\b{re.escape(n.lower())}\b", citado)]
+
+
+def _reservados_citados(texto: str, reservados: list[str]) -> list[str]:
+    norm = _normaliza(texto)
+    return [n for n in reservados if re.search(rf"\b{re.escape(n.lower())}\b", norm)]
+
+
+def limitar_reservados(texto: str, reservados: list[str], maximo: int) -> str:
+    """Remove, do fim para o começo, frases que revelam nomes do gabarito."""
+    if len(_reservados_citados(texto, reservados)) <= maximo:
+        return texto
+    linhas = [re.split(r"(?<=[.!?])\s+", linha) for linha in texto.splitlines()]
+    for i in range(len(linhas) - 1, -1, -1):
+        for j in range(len(linhas[i]) - 1, -1, -1):
+            if _reservados_citados(linhas[i][j], reservados):
+                linhas[i][j] = ""
+                atual = "\n".join(" ".join(f for f in linha if f) for linha in linhas)
+                if len(_reservados_citados(atual, reservados)) <= maximo:
+                    return re.sub(r"\n{3,}", "\n\n", atual).strip()
+    return "\n".join(" ".join(f for f in linha if f) for linha in linhas).strip()
 
 
 # Linhas de "bastidor" que o modelo pequeno às vezes escreve (observadas no
@@ -92,6 +221,8 @@ _LINHAS_META = re.compile(
     r"|vou(?:mo)? (?:explicar|reescrever|corrigir) .{0,80}(?:mais precisa|corrigid|revis).*"
     r"|(?:resposta (?:final )?revisada|resposta final|final answer)\s*:?"
     r"|pergunta (?:do inquiridor|para o estudante|guia)\s*:?\**\s*"
+    # Eco da tentativa ("**Estudante:** Product seria Recibo."), teste web de 04/11.
+    r"|(?:estudante|aluno|tentativa(?: do estudante)?|resposta do estudante|sua resposta|sua tentativa)\**\s*:.*"
     r"|aqui esta (?:uma|a) (?:resposta|explicacao)\b.*"
     r"|(?:esta|essa) pergunta (?:convida|ajuda|serve|incentiva|estimula)\b.*"
     r"|.*\b(?:faria|perguntaria|faca|pergunte) (?:ao|para o) estudante\b.*"
@@ -118,7 +249,8 @@ def remover_meta_revisao(texto: str) -> str:
         # Rótulo no início da linha seguido de conteúdo útil.
         linha = re.sub(
             r"^\s*\**(?:resposta\s+final\s+revisada|resposta\s+revisada|resposta\s+final|final answer|"
-            r"pergunta do inquiridor|pergunta para o estudante)\s*:\**\s*",
+            r"pergunta do inquiridor|pergunta para o estudante|pergunta guia|gabarito|"
+            r"avalia[cç][aã]o|feedback)\s*\**\s*:\**\s*",
             "", linha, flags=re.IGNORECASE,
         )
         linhas.append(linha)
@@ -200,7 +332,28 @@ def cortar_frase_incompleta(texto: str) -> str:
 
 
 def remover_blocos_de_codigo(texto: str) -> str:
-    return re.sub(r"```.*?(?:```|$)", "", texto, flags=re.DOTALL).strip()
+    """Retira os blocos de código e o título que só os anunciava."""
+    return re.sub(
+        r"(?:^[ \t]*(?:#{1,6}[ \t]+[^\n]*|\*\*[^*\n]{1,80}\*\*:?)[ \t]*\n\s*)?```.*?(?:```|\Z)",
+        "", texto, flags=re.DOTALL | re.MULTILINE,
+    ).strip()
+
+
+_TITULO = re.compile(r"^\s*(?:#{1,6}\s+\S.*|\*\*[^*\n]{1,80}\*\*\s*:?)\s*$")
+
+
+def remover_titulos_vazios(texto: str) -> str:
+    """Remove títulos que ficaram sem conteúdo (ex.: "### Implementação em Java"
+    depois que o bloco de código do Tutor foi retirado, teste web de 04/11)."""
+    linhas = texto.splitlines()
+    mantidas: list[str] = []
+    for i, linha in enumerate(linhas):
+        if _TITULO.match(linha):
+            seguinte = next((l for l in linhas[i + 1:] if l.strip()), "")
+            if not seguinte or _TITULO.match(seguinte):
+                continue
+        mantidas.append(linha)
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(mantidas)).strip()
 
 
 def encontrar_problemas(texto: str, exigencias: Exigencias) -> list[str]:
@@ -232,6 +385,29 @@ def encontrar_problemas(texto: str, exigencias: Exigencias) -> list[str]:
     for expressao, mensagem in exigencias.proibidos:
         if re.search(expressao, norm):
             problemas.append(mensagem)
+    if exigencias.sem_equivocos and frases_com_equivoco(limpo):
+        problemas.append(
+            "A avaliação verificada não encontrou nenhum equívoco na tentativa: não aponte "
+            "erros (\"" + frases_com_equivoco(limpo)[0][:100] + "\"). Confirme o que está certo."
+        )
+    if any(repete_resposta(limpo, anterior) for anterior in exigencias.respostas_anteriores):
+        problemas.append(
+            "Você repetiu uma resposta que já deu neste exercício. Leia a TENTATIVA ATUAL do "
+            "estudante e avalie o que ela traz de novo; não peça partes que ele já respondeu."
+        )
+    if exigencias.fala_estudante and frases_atribuidas(limpo, exigencias.fala_estudante):
+        problemas.append(
+            "Você atribuiu ao estudante algo que ele não escreveu (\""
+            + frases_atribuidas(limpo, exigencias.fala_estudante)[0][:120]
+            + "\"). Avalie só o que está na mensagem dele; se ele respondeu uma parte, "
+            "confirme-a e pergunte sobre a próxima."
+        )
+    revelados = _reservados_citados(limpo, exigencias.reservados)
+    if len(revelados) > exigencias.max_reservados:
+        problemas.append(
+            "Não entregue a solução do exercício (você citou " + ", ".join(revelados)
+            + "): diga o que está certo e faça uma pergunta guia sobre a próxima parte."
+        )
     for alternativas in exigencias.termos_obrigatorios:
         if not any(_normaliza(t) in norm for t in alternativas):
             problemas.append(exigencias.descricao_termos or f"Mencione {alternativas[0]}.")
@@ -284,7 +460,17 @@ def corrigir_mecanicamente(texto: str, exigencias: Exigencias) -> str:
     texto = remover_frases_erradas(texto)
     if exigencias.proibidos:
         texto = _remover_frases(texto, [e for e, _ in exigencias.proibidos])
-    texto = remover_introducoes_penduradas(remover_repeticoes(texto))
+    if exigencias.reservados:
+        texto = limitar_reservados(texto, exigencias.reservados, exigencias.max_reservados)
+    if exigencias.sem_equivocos:
+        for frase in frases_com_equivoco(texto):
+            texto = texto.replace(frase, "")
+    if exigencias.fala_estudante:
+        for frase in frases_atribuidas(texto, exigencias.fala_estudante):
+            texto = texto.replace(frase, "")
+        texto = "\n".join(re.sub(r"[ \t]{2,}", " ", linha).rstrip() for linha in texto.splitlines())
+    texto = remover_introducoes_penduradas(remover_titulos_vazios(remover_repeticoes(texto)))
+    texto = remover_titulos_vazios(texto)
     return cortar_frase_incompleta(limitar_tamanho(texto, exigencias.max_caracteres))
 
 

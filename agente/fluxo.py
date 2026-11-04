@@ -9,7 +9,10 @@
   5. Executa a crew: autores (com guardrails) e o Guardião (veredito).
   6. Só entrega texto aprovado. Uma reprovação fundamentada permite uma
      rodada de correção seguida de nova revisão; incerteza ou erro persistente
-     produzem orientação segura sem expor o rascunho.
+     produzem orientação segura sem expor o rascunho. Exceção: na avaliação de
+     uma tentativa, o Guardião não tem o gabarito; ali um INCONCLUSIVO não
+     bloqueia, e a validação automática (que confere se o gabarito não foi
+     revelado) decide.
   7. Monta a resposta final (material verificado + texto dos agentes) e salva
      o turno na memória.
 """
@@ -22,6 +25,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from . import recusas
+from .avaliacao_exercicio import AVALIADORES
 from .agentes import TITULOS
 from .catalogo import padroes_gof_citados
 from .conhecimento import (
@@ -35,7 +39,7 @@ from .conhecimento import (
 )
 from .config import MAX_REESCRITAS_GUARDIAO
 from .crew import (
-    PlanoTurno, montar_crew, montar_crew_reescrita, montar_crew_revisao,
+    INTENCOES_AVALIACAO, PlanoTurno, montar_crew, montar_crew_reescrita, montar_crew_revisao,
     pergunta_final_padrao, referencia_revisao, problemas_textos,
 )
 from .erro import ErroEntradaVazia, ErroModeloIndisponivel, ErroSaidaInesperada
@@ -125,7 +129,40 @@ def _planejar(pergunta: str, intencao, memoria: MemoriaConversa, nivel: str) -> 
         exercicio = exercicio_por_id(memoria.exercicio_atual)
         if exercicio:
             plano.gabarito = exercicio.gabarito
+            plano.enunciado = exercicio.enunciado
+        falas, respostas = [], []
+        for turno in reversed(memoria.historico):
+            if turno.get("intencao") == "exercicio":
+                break
+            falas.append(turno.get("pergunta", ""))
+            if turno.get("tipo") == "resposta":
+                respostas.append(turno.get("resposta", ""))
+        falas.reverse()
+        respostas.reverse()
+        plano.fala_estudante = "\n".join([*falas, pergunta])
+        plano.respostas_anteriores = respostas
+        if exercicio:
+            plano.contexto = _contexto_avaliacao(exercicio, falas, respostas)
+            avaliador = AVALIADORES.get(exercicio.ident)
+            if avaliador:
+                # Avaliação verificada (sem modelo): o Inquiridor só redige o retorno.
+                plano.avaliacao = avaliador(plano.fala_estudante)
+                plano.fatos["inquiridor"] = plano.avaliacao.fatos()
     return plano, exemplo
+
+
+def _contexto_avaliacao(exercicio, falas: list[str], respostas: list[str]) -> str:
+    """Estado do exercício para o Inquiridor, sem as respostas anteriores do
+    sistema (o modelo de 3B copiava a última). Só a última pergunta feita entra."""
+    partes = [f"Enunciado do exercício em andamento:\n{exercicio.enunciado}"]
+    if falas:
+        partes.append("Tentativas anteriores do estudante neste exercício (dados):\n"
+                      + "\n".join(f"- {f}" for f in falas))
+    if respostas:
+        ultima = [f for f in re.split(r"(?<=[.!?])\s+", respostas[-1].strip()) if f.endswith("?")]
+        if ultima:
+            partes.append(f"Última pergunta feita ao estudante: {ultima[-1]}")
+    return "\n\n".join(partes)
 
 
 def _separar_pergunta_final(texto: str) -> tuple[str, str]:
@@ -157,6 +194,11 @@ def _montar_resposta(plano: PlanoTurno, textos: dict[str, str], exemplo: str) ->
         elif autor == "exemplificador" and exemplo:
             blocos += [EXEMPLOS[exemplo].bloco_markdown(), texto]
             pergunta_final = ""
+        elif autor == "inquiridor" and plano.avaliacao is not None and plano.intencao == "avaliacao":
+            # A pergunta seguinte é a verificada; as do modelo saem.
+            frases = re.split(r"(?<=[.!?])\s+", texto)
+            blocos.append(" ".join(f for f in frases if not f.rstrip().endswith("?")).strip())
+            pergunta_final = plano.avaliacao.pergunta
         elif autor == "tutor" and plano.intencao == "conceito" and plano.pergunta_geral:
             corpo, pergunta_final = _separar_pergunta_final(texto)
             blocos += [corpo, "```text\n" + carregar_uml() + "\n```"]
@@ -282,11 +324,25 @@ def executar_fluxo(
         tentativas.append(decisao)
 
     problemas_finais = problemas_textos(plano, textos)
-    bloqueada = decisao["veredito"] != "APROVADO" or bool(problemas_finais)
+    # Teste web de 04/11: as duas avaliações de "o product seria o recibo" foram
+    # bloqueadas porque o Guardião inventou críticas (descartadas) e virou
+    # INCONCLUSIVO. Na avaliação, sem gabarito, ele não consegue decidir.
+    sem_decisao_na_avaliacao = (plano.intencao in INTENCOES_AVALIACAO
+                                and decisao["veredito"] == "INCONCLUSIVO" and not falha_correcao)
+    bloqueada = ((decisao["veredito"] != "APROVADO" and not sem_decisao_na_avaliacao)
+                 or bool(problemas_finais))
     revisao = {**decisao, "reescrito": reescrito, "bloqueada": bloqueada,
                "tentativas": tentativas, "validacao_automatica": problemas_finais,
-               "falha_correcao": falha_correcao}
-    resposta = recusas.resposta_nao_validada() if bloqueada else _montar_resposta(plano, textos, exemplo)
+               "falha_correcao": falha_correcao,
+               "entregue_sem_aprovacao": sem_decisao_na_avaliacao and not bloqueada}
+    if bloqueada and plano.avaliacao is not None:
+        # Em vez de "não consegui validar", o retorno verificado do sistema.
+        resposta = plano.avaliacao.texto() + "\n\n" + plano.avaliacao.pergunta
+        revisao["resposta_verificada"] = True
+    elif bloqueada:
+        resposta = recusas.resposta_nao_validada()
+    else:
+        resposta = _montar_resposta(plano, textos, exemplo)
     tipo = "orientacao" if bloqueada else "resposta"
     agente_ultimo = plano.agentes[-1]
     duracao = round(time.monotonic() - inicio, 2)

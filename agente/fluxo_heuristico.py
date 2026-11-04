@@ -1,8 +1,9 @@
 """Roteador de intenções (determinístico) e barreiras anti-alucinação.
 
 Escolhemos regras em vez de pedir ao modelo de 3B que classifique a pergunta:
-são instantâneas, previsíveis e testáveis (tests/test_unitarios.py). O custo é a
-rigidez diante de formulações muito livres.
+são instantâneas, previsíveis e testáveis (tests/test_roteador.py). O custo é a
+rigidez diante de formulações muito livres; erros de digitação nas palavras que
+decidem o destino são corrigidos antes (normalizar_pergunta).
 
 Ordem de decisão:
   1. Barreiras (detectar_barreira): saudação, invenção de padrão, padrão
@@ -27,6 +28,59 @@ def _normaliza(texto: str) -> str:
     texto = texto.lower()
     texto = unicodedata.normalize("NFD", texto)
     return "".join(c for c in texto if unicodedata.category(c) != "Mn")
+
+
+# Palavras que decidem o roteamento. Um erro de digitação nelas ("exerício",
+# "factory metod") mandava o pedido para o destino errado: o pedido de
+# exercício caía em "conceito" e o Tutor improvisava um exemplo (teste na
+# interface web, 04/11). A ordem desempata: "metod" vira "method".
+_PALAVRAS_CHAVE = (
+    "exercicio", "exercicios", "exemplo", "exemplos", "desafio", "desafios",
+    "atividade", "atividades", "praticar", "factory", "method", "metodo",
+    "padrao", "explique", "explicar", "diferenca", "comparacao", "comparar",
+    "confundido", "encerrar", "cancelar", "abstract", "simple", "strategy",
+    "template", "participantes", "incorreto", "equivocado", "conceito",
+)
+# Palavras reais próximas de uma palavra-chave, que não devem ser trocadas.
+_PALAVRAS_REAIS = {"exercito", "exercer", "exerceu", "exemplar", "exemplares", "metade",
+                   "padrinho", "simples", "factor", "fabrico", "comparo", "explico",
+                   "explica", "explicou", "conceitos", "atividades"}
+
+
+def _distancia(a: str, b: str, limite: int) -> int:
+    """Distância de edição com transposição (Damerau restrita), com corte."""
+    if abs(len(a) - len(b)) > limite:
+        return limite + 1
+    anterior2: list[int] = []
+    anterior = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        atual = [i] + [0] * len(b)
+        for j, cb in enumerate(b, 1):
+            atual[j] = min(anterior[j] + 1, atual[j - 1] + 1, anterior[j - 1] + (ca != cb))
+            if i > 1 and j > 1 and ca == b[j - 2] and a[i - 2] == cb:
+                atual[j] = min(atual[j], anterior2[j - 2] + 1)
+        if min(atual) > limite:
+            return limite + 1
+        anterior2, anterior = anterior, atual
+    return anterior[-1]
+
+
+def _corrigir_palavra(palavra: str) -> str:
+    if len(palavra) < 5 or palavra in _PALAVRAS_CHAVE or palavra in _PALAVRAS_REAIS:
+        return palavra
+    for chave in _PALAVRAS_CHAVE:
+        # Mesma inicial; 1 erro em palavras curtas, 2 nas de 9 letras ou mais.
+        limite = 2 if len(chave) >= 9 else 1
+        if chave[0] == palavra[0] and _distancia(palavra, chave, limite) <= limite:
+            return chave
+    return palavra
+
+
+def normalizar_pergunta(texto: str) -> str:
+    """Minúsculas, sem acentos, espaços simples e palavras-chave com erro de
+    digitação corrigidas ("me de um exerício" -> "me de um exercicio")."""
+    p = " ".join(_normaliza(texto).split())
+    return re.sub(r"[a-z]+", lambda m: _corrigir_palavra(m.group(0)), p)
 
 
 # Intencoes respondidas sem chamar o modelo (texto deterministico).
@@ -189,6 +243,18 @@ def detectar_nivel(pergunta: str) -> str:
     return ""
 
 
+_VOCABULARIO_PRATICA = (
+    r"\b(?:products?|creators?|concret\w*|produtos?|criador\w*|recibos?\w*|emissor\w*|emitir|"
+    r"html|pdf|pagamentos?|caixa\w*|pix|cartao|whats\w*|notificador\w*|notificac\w*|"
+    r"seria|seriam|criaria|usaria|faria|colocaria|implement\w*|sobrescrev\w*|estend\w*|"
+    r"extends|herd\w*|subclasses?|simple factory|static|estatic\w*)\b"
+)
+_PERGUNTA_DE_CONCEITO = (
+    r"^(?:o que|oque|explique|explica|como funciona|qual (?:a|e a) diferenca|por que|porque|"
+    r"pra que|para que|me (?:explique|explica|de um exemplo|mostre))\b"
+)
+
+
 def classificar_intencao(
     pergunta: str,
     *,
@@ -200,7 +266,7 @@ def classificar_intencao(
     As recusas tem prioridade. Pedidos explicitos de conceito/exemplo/pratica
     mantem seu destino; tentativas e continuacoes usam o estado pedagogico.
     """
-    p = " ".join(_normaliza(pergunta).split())
+    p = normalizar_pergunta(pergunta)
 
     def contem(frases: list[str]) -> bool:
         """Verifica se alguma frase (normalizada) esta contida no texto."""
@@ -233,12 +299,26 @@ def classificar_intencao(
 
     pedido_pratica = (
         r"^(?:por favor[, ]+)?(?:(?:voce )?(?:pode|poderia)\s+)?(?:me\s+)?"
-        r"(?:proponha|propor|crie|criar|sugira|sugerir|passe|passar|de|dar|quero|gostaria de|peco|resolva)"
+        r"(?:proponha|propor|crie|criar|sugira|sugerir|passe|passa|passar|de|da|dar|manda|mande|"
+        r"traga|traz|gere|gera|elabore|quero|queria|gostaria de|peco|resolva)"
         r"\b.*\b(?:exercicio|desafio|atividade|quiz|tarefa)\b"
     )
     if (re.search(pedido_pratica, p)
             or contem(["me pergunte", "pergunta para mim", "quero praticar", "vamos praticar"])):
         return Intencao("exercicio", 0.85, "pedido de exercicio pratico")
+
+    # Durante o exercício, o estudante costuma responder sem "Minha resposta:"
+    # ("Para HTML eu criaria ReciboHtml...", "Ela usou uma Simple Factory").
+    # Teste web de 04/11: isso caía em fora de escopo ou em comparação, e a
+    # sequência do exercício se perdia. Vale como tentativa quando usa o
+    # vocabulário da prática e não é uma pergunta de conceito ou comparação.
+    contexto_de_pratica = exercicio_pendente and ultima_intencao in {"exercicio", "avaliacao", "esclarecimento"}
+    pergunta_conceito = re.match(_PERGUNTA_DE_CONCEITO, p) or re.search(
+        r"\b(?:resum\w*|recapitul\w*|lembrar|fechamento|conclus\w*)\b", p) or (
+        p.rstrip().endswith("?")
+        and re.search(r"\b(?:diferenca|compar\w*|o que (?:e|eh|significa)|explic\w*|quando (?:usar|evitar))\b", p))
+    if contexto_de_pratica and re.search(_VOCABULARIO_PRATICA, p) and not pergunta_conceito:
+        return Intencao("avaliacao", 0.75, "resposta ao exercicio em andamento", usar_contexto=True)
 
     # Pedidos expositivos vem antes de palavras como "exercicio" e "exemplo":
     # mencionar uma atividade nao significa responder a ela ou pedir outra.
@@ -258,7 +338,6 @@ def classificar_intencao(
     # Continuacoes elipticas precisam de contexto; nao basta tornar toda
     # mensagem desconhecida parte da aula (isso aceitaria assuntos alheios).
     curta = re.sub(r"[^\w\s]", "", p).strip()
-    contexto_de_pratica = exercicio_pendente and ultima_intencao in {"exercicio", "avaliacao", "esclarecimento"}
     if contexto_de_pratica and curta == "nao entendi":
         return Intencao("esclarecimento", 0.8, "duvida sobre a atividade em andamento", usar_contexto=True)
     if ultima_intencao and curta in {
@@ -266,11 +345,14 @@ def classificar_intencao(
         "e por que", "por que", "como assim", "nao sei", "e depois",
         "pode explicar melhor", "e quando devo usalo",
     }:
-        tipo = "esclarecimento" if contexto_de_pratica else ultima_intencao
+        # "Sim"/"Não" no exercício respondem à pergunta guia: são tentativa.
+        tipo = ("avaliacao" if contexto_de_pratica and curta in {"sim", "nao"} else
+                "esclarecimento" if contexto_de_pratica else ultima_intencao)
         if tipo not in {"conceito", "exemplo", "diagnostico", "avaliacao", "fechamento",
                         "selecao", "comparacao", "uso_incorreto", "esclarecimento"}:
             tipo = "conceito"
         return Intencao(tipo, 0.8, "continuidade do turno anterior", usar_contexto=True)
+
 
     # 3. Exemplo — pedido explícito de exemplo/código
     if contem(
@@ -454,7 +536,7 @@ def decidir_agentes(intencao: Intencao, pergunta: str = "") -> list[str]:
     if intencao.tipo in {"uso_incorreto", "comparacao", "selecao", "fechamento"}:
         return base + ["guardiao"]
 
-    p = _normaliza(pergunta)
+    p = normalizar_pergunta(pergunta)
 
     def contem_termos(termos: list[str]) -> bool:
         return any(_normaliza(t) in p for t in termos)
