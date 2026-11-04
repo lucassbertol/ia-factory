@@ -69,14 +69,14 @@ def _bloco(secoes: dict[str, str], ident: str, linguagem: str) -> str:
 _SECOES = _ler_secoes((REFERENCIAS_DIR / "factory_method.md").read_text(encoding="utf-8"))
 _BASE = ("definicao", "problema", "participantes", "cuidados", "confiabilidade", "fontes")
 _POR_INTENCAO = {
-    "conceito": ("consequencias", "selecao"),
-    "selecao": ("consequencias", "selecao"),
+    "conceito": ("contrato_produto", "consequencias", "selecao"),
+    "selecao": ("consequencias", "selecao", "decisao"),
     "comparacao": ("comparacao",),
-    "exemplo": ("distincoes",),
-    "uso_incorreto": ("usos_incorretos", "distincoes"),
-    "diagnostico": ("comparacao", "usos_incorretos", "distincoes"),
-    "avaliacao": ("comparacao", "usos_incorretos"),
-    "esclarecimento": ("comparacao", "usos_incorretos"),
+    "exemplo": ("execucao", "java", "distincoes"),
+    "uso_incorreto": ("usos_incorretos", "execucao", "distincoes"),
+    "diagnostico": ("contrato_produto", "comparacao", "usos_incorretos", "java"),
+    "avaliacao": ("avaliacao_pedagogica", "usos_incorretos", "java"),
+    "esclarecimento": ("avaliacao_pedagogica", "usos_incorretos", "java"),
     "fechamento": ("consequencias", "selecao", "comparacao", "usos_incorretos"),
     "exercicio": ("comparacao", "usos_incorretos"),
 }
@@ -103,7 +103,7 @@ class ExemploJava:
 
     def bloco_markdown(self) -> str:
         return (
-            f"**{self.titulo}** (arquivo `{self.arquivo}`, compilado e executado pela dupla)\n\n"
+            f"**{self.titulo}**\n\n"
             f"```java\n{self.codigo}\n```\n\n"
             f"Saída ao executar `java {self.arquivo[:-5]}`:\n\n```\n{self.saida_esperada}\n```"
         )

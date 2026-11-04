@@ -1,5 +1,6 @@
 """Leitura da referência e isolamento do conteúdo reservado, sem Ollama."""
 import unittest
+import re
 from agente import conhecimento as c
 
 
@@ -13,6 +14,18 @@ class ReferenciaTest(unittest.TestCase):
             self.assertNotIn('public class', texto)
         self.assertIn('famílias', c.carregar_referencia('comparacao'))
         self.assertNotIn('## [comparacao]', c.carregar_referencia('exemplo'))
+
+    def test_ampliacao_chega_apenas_as_intencoes_relevantes(self):
+        self.assertIn('## [contrato_produto]', c.carregar_referencia('conceito'))
+        self.assertIn('## [decisao]', c.carregar_referencia('selecao'))
+        self.assertNotIn('## [decisao]', c.carregar_referencia('exemplo'))
+        self.assertIn('## [avaliacao_pedagogica]', c.carregar_referencia('avaliacao'))
+        for intencao in c._POR_INTENCAO:
+            referencia = c.carregar_referencia(intencao)
+            ids = re.findall(r'^## \[([^]]+)\]', referencia, re.MULTILINE)
+            self.assertEqual(len(ids), len(set(ids)))
+            self.assertNotIn('## [exercicio:', referencia)
+            self.assertNotIn('## [exemplo:', referencia)
 
     def test_parser_preserva_titulos_dentro_do_codigo(self):
         secoes = c._ler_secoes('## [teste] Teste\n```text\n## [falso] Dado\n```\n## [fim] Fim\ntexto')

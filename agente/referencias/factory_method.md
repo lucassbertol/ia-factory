@@ -2,91 +2,180 @@
 
 Fonte única do material didático. Os identificadores entre colchetes são usados
 pelo leitor Python; preserve-os ao editar. Reinicie o processo após alterações.
-Gabaritos são reservados ao Inquiridor e não entram na referência compartilhada.
+Gabaritos são reservados à avaliação do Inquiridor e à revisão do Guardião;
+não entram na referência conceitual compartilhada nem na resposta pública.
 
 ## [definicao] Definição
-Factory Method é um padrão de projeto **criacional** do catálogo GoF (Gamma, Helm,
-Johnson e Vlissides). Intenção: definir uma interface para criar um objeto, mas
-deixar as subclasses decidirem qual classe concreta instanciar. Também é chamado
-de "Virtual Constructor".
+Factory Method é um padrão de projeto **criacional** do catálogo GoF (Gamma,
+Helm, Johnson e Vlissides). Define um contrato de criação no Creator e permite
+que suas subclasses escolham a classe concreta do produto por sobrescrita.
+Também é chamado de "Virtual Constructor"; não é um construtor Java especial.
+"Interface de criação" significa contrato, não necessariamente a palavra interface
+na declaração Java. Um método que apenas encapsula new não basta para identificar
+o Factory Method do GoF: examine a criação especializada por subclasses.
 
 ## [problema] Problema que resolve
-Uma classe precisa criar objetos, mas não deve depender das classes concretas
-desses objetos. Sem o padrão, o código de negócio faz `new ClasseConcreta()` e
-pode precisar ser editado para passar a criar outro tipo de produto.
+Uma operação precisa obter e usar um produto, mas sua lógica não deve depender
+de qual implementação concreta será escolhida. Se ela instancia diretamente essa
+implementação, trocar o produto pode exigir editar a operação. O padrão cria um
+ponto de extensão para variar a obtenção do produto mantendo o código que o usa.
+Não elimina toda dependência concreta do programa: separa responsabilidades.
 
-## [participantes] Participantes
-- **Product**: interface (ou classe base) comum dos objetos criados; define suas
-  operações de uso, não a operação que os cria.
-- **ConcreteProduct**: implementa Product.
-- **Creator**: declara o factory method, que retorna Product. Normalmente tem uma
-  operação de negócio que chama o factory method e usa o produto pelo contrato.
-- **ConcreteCreator**: sobrescreve o factory method para devolver um
-  ConcreteProduct.
+## [participantes] Participantes e responsabilidades
+- **Product**: contrato de uso comum aos produtos; em Java, interface ou classe base.
+- **ConcreteProduct**: implementa Product ou estende a classe base do produto.
+- **Creator**: declara o factory method, que retorna Product. Normalmente contém
+  uma operação de negócio que chama esse método e usa o produto pelo contrato.
+- **ConcreteCreator**: herda de Creator e sobrescreve o factory method para
+  fornecer o ConcreteProduct apropriado.
 
-Relações: ConcreteCreator herda de Creator; ConcreteProduct implementa Product;
-A operação de negócio do Creator usa o contrato Product; cada ConcreteCreator
-especializa a criação de um ConcreteProduct. Um Creator concreto também pode
-conhecer um produto padrão na implementação do factory method.
-Quem sobrescreve o factory method é o ConcreteCreator (nunca o ConcreteProduct).
+São duas hierarquias: criadores e produtos. Quem sobrescreve o factory method
+é o ConcreteCreator (nunca o ConcreteProduct, nesse papel). Os nomes das classes
+podem variar; identifique responsabilidades e relações, não sufixos ou palavras.
+Um Creator concreto pode conhecer um produto padrão no método de criação.
 
-## [cuidados] Pontos que costumam ser ensinados de forma errada
-- Creator e factory method **não precisam ser abstratos**: o Creator pode ter
-  uma implementação padrão que as subclasses sobrescrevem.
-- O `new` continua existindo nos criadores concretos, na configuração e, se
-  houver implementação padrão, no próprio Creator.
-- O código de configuração (por exemplo, o `main`) ainda escolhe qual
-  ConcreteCreator usar. O ganho é que a operação de negócio do Creator não muda.
-- Um factory method parametrizado também é possível; a presença de `if`/`switch`
-  sozinha não decide se o padrão existe. O que decide é a criação especializada
-  por sobrescrita em subclasses.
-- Em Java, métodos `static` não são sobrescritos (são ocultados). Uma static
-  factory isolada não demonstra o Factory Method do GoF.
-- O tipo declarado de retorno pode ser Product, mesmo quando o objeto devolvido
-  é um ConcreteProduct: `Notificacao criarNotificacao()` pode retornar `new Sms()`.
-  Em Java também é permitida uma sobrescrita com retorno covariante compatível.
-- Dizer "método de criação" no lugar de "factory method" não é erro quando o
-  contexto identifica claramente o método sobrescrito.
+## [contrato_produto] Contrato e substituição dos produtos
+O contrato Product descreve operações úteis ao cliente. Criar o produto é papel
+do Creator; executar as operações do produto é papel dos ConcreteProducts.
+Implementar a interface torna o tipo compatível, mas uma implementação também deve
+respeitar o significado esperado das operações. Não basta retornar qualquer objeto.
+Se o código cliente precisa converter o resultado para uma classe concreta para
+realizar sua operação normal, revise se Product expressa o contrato necessário.
+Uma nova capacidade exclusiva de um produto não obriga ampliar o contrato de todos:
+avalie a necessidade do cliente antes de mudar a interface.
+A herança de criadores especializa a criação; a composição aparece quando o Creator
+usa um Product. Não são estratégias mutuamente exclusivas neste padrão.
 
-## [consequencias] Consequências
-Vantagens: a operação de negócio do Creator fica desacoplada das classes
-concretas; novos produtos entram criando um novo ConcreteCreator e um novo
-ConcreteProduct, sem editar a operação existente (aberto/fechado); a configuração que escolhe o
-criador pode mudar. Não se promete que nenhum código existente mudará. A criação
-fica concentrada em um ponto previsível.
-Custos: mais classes e uma hierarquia de criadores; pode ser exagero quando não
-há variação real de produtos — aí uma instanciação direta basta.
+## [cuidados] Limites e variações
+- Creator e factory method não precisam ser abstratos: pode existir criação padrão.
+- O new continua existindo na criação concreta e na configuração. O factory method
+  também pode devolver uma instância existente; alocar um objeto novo a cada chamada
+  não é uma obrigação do padrão.
+- Um método static em Java não participa de sobrescrita de métodos de instância.
+  Uma static factory isolada não demonstra o Factory Method do GoF.
+- Um factory method pode receber parâmetros. A presença de if/switch sozinha
+  não define nem invalida o padrão; examine quem especializa a criação.
+- "Método de criação" pode ser uma forma correta de se referir ao factory method.
+  Não exija reprodução literal da definição para aceitar uma explicação equivalente.
 
-## [selecao] Quando usar / quando evitar
-Usar: um framework ou classe base sabe *quando* criar algo, mas só as subclasses
-sabem *o quê* criar; espera-se adicionar novos tipos de produto com frequência.
-Evitar: existe um único tipo de produto e não há previsão de variação; a
-hierarquia de criadores só adicionaria complexidade.
+## [consequencias] Consequências e trade-offs
+O ganho é desacoplar a operação de negócio das implementações do produto e permitir
+extensões por novos produtos/criadores compatíveis. Nos exemplos, adicionar um tipo
+não exige editar avisar() ou gerar(); a configuração, como main, pode mudar.
+Isso favorece o princípio aberto/fechado nesse ponto de extensão, não garante que
+nenhum arquivo existente mudará nem dispensa mudanças se o contrato Product mudar.
+O custo é manter subclasses e possíveis hierarquias paralelas. O padrão não garante
+melhor desempenho, economia de memória, thread safety nem redução do número de classes.
 
-## [comparacao] Padrões com que é confundido
-- **Simple Factory** (fábrica simples): um método, muitas vezes `static`, com
-  `if`/`switch` que escolhe o produto. É um idioma útil, mas **não é um padrão
-  do catálogo GoF**, e não usa sobrescrita em subclasses. A confusão vem do nome
-  "fábrica" e do fato de ambos encapsularem a criação. Um `new Email()` isolado
-  na operação de negócio é instanciação direta, não Simple Factory. Um método
-  ser `static` ou conter `if` também não basta: é preciso analisar sua função.
-- **Abstract Factory** (GoF): fornece uma interface para criar **famílias de
-  objetos relacionados** sem especificar classes concretas. Suas operações são
-  frequentemente implementadas com Factory Methods, por isso os dois aparecem
-  juntos. A diferença está na intenção (uma família coerente de produtos versus
-  delegar a criação de um produto a subclasses), não apenas em contar métodos.
-- **Template Method** (GoF): o factory method costuma ser chamado dentro de uma
-  operação no estilo Template Method; um é um passo do outro.
+## [selecao] Quando usar e quando evitar
+Use quando uma operação reutilizável deve trabalhar com produtos intercambiáveis
+pelo mesmo contrato e subclasses precisam decidir qual implementação fornecer.
+É útil como ponto de extensão de uma classe base ou framework. Ter vários produtos,
+sozinho, não obriga a usar Factory Method.
+Exemplo de escolha: uma operação de impressão reutiliza os mesmos passos, mas
+subclasses fornecem documentos apropriados a diferentes destinos.
+Evite se a implementação necessária é única, sem variação prevista, e a instanciação
+direta já é clara; criar hierarquias só acrescentaria manutenção.
+Se basta selecionar implementações num ponto central, Simple Factory pode bastar.
+Se é preciso trocar um algoritmo em um objeto existente, avalie composição/Strategy,
+sem transformar toda variação de comportamento em hierarquia de criação.
 
-## [usos_incorretos] Usos incorretos comuns
-1. Declarar o factory method, mas a operação de negócio continuar usando `new`
-   de uma classe concreta (a sobrescrita nunca tem efeito). Correção: a operação
-   deve chamar o factory method. Ver ExemploUsoIncorreto.java.
-2. Chamar de "Factory Method" uma fábrica com seleção centralizada de produtos,
-   como o método `static` com `if` de ExemploSimpleFactory.java, sem sobrescrita
-   de criação em subclasses (nesse exemplo, é Simple Factory). Correção: mover a criação para um método de instância sobrescrito
-   por ConcreteCreators, ou assumir que se trata de Simple Factory.
-3. Criar a hierarquia sem variação real. Correção: instanciar diretamente.
+## [decisao] Roteiro curto de decisão de projeto
+1. Identifique a operação que deve permanecer reutilizável e o produto que varia.
+2. Defina o contrato mínimo que a operação precisa desse produto.
+3. Verifique se subclasses da classe base são um ponto de extensão adequado.
+4. Se forem, separe a obtenção do produto em um método sobrescrevível e faça a
+   operação usar seu retorno. Se não forem, uma construção direta, fábrica simples
+   ou produto recebido por parâmetro pode atender com menos estrutura.
+5. Confira a extensão: a nova implementação respeita Product? A operação precisa
+   conhecer o novo tipo? A configuração sabe escolher o criador necessário?
+Esse roteiro orienta uma decisão; não implica aplicar o padrão em toda criação.
+Receber um produto pronto por parâmetro reduz o acoplamento de uso, mas isso por si
+só não demonstra Factory Method: é preciso identificar a criação especializada.
+
+## [comparacao] Padrões e idiomas próximos
+- **Simple Factory**: centraliza a escolha e obtenção de produtos, frequentemente
+  por um método com if/switch. Não pertence ao catálogo GoF. A confusão vem de ambos
+  encapsularem criação. Não há exigência de static; a diferença relevante é a
+  seleção centralizada em contraste com especialização por subclasses de Creator.
+- **Static factory method**: método static que fornece um objeto, como alternativa
+  a chamar um construtor. Pode existir sem seleção entre produtos e não é, por si,
+  Factory Method nem necessariamente Simple Factory.
+- **Abstract Factory**: cria famílias de produtos relacionados. Factory Method
+  especializa uma operação de criação por subclasses. Abstract Factory pode usar
+  Factory Methods na implementação; contar métodos não distingue suas intenções.
+- **Template Method**: define o esqueleto de um algoritmo com passos especializáveis.
+  Uma operação pode chamar um Factory Method como um desses passos; os padrões
+  podem coexistir, mas um organiza o algoritmo e o outro especializa a criação.
+- **Strategy**: encapsula algoritmos intercambiáveis por composição. Não exige
+  sobrescrever um método de criação. Pode coexistir com Factory Method.
+- **Builder**: organiza a construção em etapas de um objeto complexo. Factory
+  Method especializa a operação que fornece um produto; chamar vários métodos
+  não basta para caracterizar Builder.
+- **Prototype**: obtém objetos a partir da cópia de uma instância existente.
+  Factory Method varia o fornecimento por subclasses; um factory method pode
+  internamente usar uma cópia sem que as intenções dos dois padrões se confundam.
+
+## [usos_incorretos] Diagnóstico de uso incorreto
+1. A operação declara uma extensão de criação, mas ignora-a e usa new de um produto
+   fixo. A sobrescrita fica sem efeito nesse caminho. Corrija a operação para chamar
+   o factory method. Instanciação direta não é Simple Factory.
+2. Uma fábrica faz seleção centralizada sem sobrescrita, mas é chamada de Factory
+   Method. Reconheça como Simple Factory quando essa for sua função; só introduza
+   subclasses se houver necessidade de extensão. Simple Factory não é errado em si.
+3. Produtos incompatíveis com Product quebram o contrato de uso; corrija o contrato
+   ou a implementação, sem atribuir operações de criação aos produtos.
+4. Sobrescrever a operação inteira só para trocar o produto duplica lógica: nos
+   exemplos didáticos, sobrescreva criarNotificacao()/criarExportador(), mantendo
+   avisar()/gerar(). Não é proibido sobrescrever outras operações por outros motivos.
+5. Hierarquia sem variação real acrescenta complexidade: prefira instanciação direta.
+
+## [execucao] Fluxo de execução e extensão
+A configuração escolhe um criador. A operação de negócio chama o factory method;
+a implementação do criador fornece um objeto compatível com Product; a operação
+usa esse objeto pelo contrato. A escolha do produto depende da instância concreta
+do criador, não apenas do tipo declarado da variável que o referencia.
+Para uma extensão nos exemplos: implemente o novo produto e especialize o método
+de criação em um criador. Atualize a configuração quando necessário. Preserve o
+contrato comum e a operação de negócio. Não confunda o produto com quem o fornece.
+
+## [java] Regras Java relevantes
+- O método sobrescrito deve ter assinatura compatível e não pode reduzir a
+  visibilidade. Use @Override para o compilador conferir a intenção de sobrescrita.
+- O retorno declarado pode ser Product e o objeto retornado um ConcreteProduct.
+  Não há contradição entre Notificacao criarNotificacao() e return new Sms().
+  Retorno covariante permite declarar um subtipo compatível na sobrescrita.
+- Métodos de instância são despachados conforme o objeto em execução; métodos
+  static são ocultados, não sobrescritos. Construtores não são sobrescritos.
+- protected nos exemplos dá acesso à extensão por subclasses; não significa que
+  todo factory method precise ter essa visibilidade. Ele precisa poder ser sobrescrito.
+- Métodos private não são herdados pelas subclasses e métodos final não podem ser
+  sobrescritos; não servem como ponto de extensão por sobrescrita.
+- Mudar apenas os parâmetros cria uma sobrecarga, não a sobrescrita do método original.
+- Uma variável do tipo Creator pode referenciar um ConcreteCreator. Isso não muda
+  a classe real do objeto nem impede a execução da implementação sobrescrita.
+
+## [avaliacao_pedagogica] Critérios para avaliar tentativas
+Avalie duas dimensões independentes: correção do que foi tentado e completude da
+atividade considerando o histórico. Uma resposta correta pode ser parcial.
+Uma parte não respondida é pendência, não erro. Não atribua ao estudante afirmações
+que ele não fez. Nomes alternativos são aceitáveis se papéis e relações forem coerentes.
+O gabarito é uma modelagem de referência, não um texto obrigatório a reproduzir.
+Na tentativa correta e parcial, confirme a parte correta e faça uma pergunta sobre
+o próximo objetivo, sem fornecer sua solução. Se houver erro, trate o principal
+com uma orientação curta; se ambígua, peça esclarecimento sem presumir acerto.
+No JSON interno, mantenha o julgamento coerente com o feedback público. Objetivos
+pendentes não devem conter o gabarito. A revisão deve apontar contradição real,
+não apenas uma formulação diferente. Só cite fatos e trechos efetivamente fornecidos.
+Não confunda “parcialmente correta” com “correta e incompleta”: a primeira contém
+um erro no que foi afirmado; a segunda pode não ter erro algum. Para uma explicação
+sem detalhes suficientes, peça que o estudante descreva a relação entre classes.
+Não suponha que omitir uma justificativa equivale a defender uma relação errada.
+Numa correção, considere a versão atual: não mantenha como erro algo já corrigido.
+Um exemplo de distinção: identificar corretamente um participante é uma tentativa
+correta e parcial; identificar um participante corretamente e atribuir criação ao
+produto pode ser parcialmente correto. Explicar um conceito com nomes alternativos
+é aceitável; listar os nomes esperados sem relações pode exigir esclarecimento.
 
 ## [resumo_exemplos] Exemplos verificados do projeto (compilados e executados pela dupla)
 - ExemploFactoryMethod.java — Product: Notificacao; ConcreteProducts: Email, Sms;
@@ -95,27 +184,23 @@ hierarquia de criadores só adicionaria complexidade.
 - ExemploFactoryMethodPadrao.java — Creator concreto Relatorio com implementação
   padrão de criarExportador(); RelatorioCsv sobrescreve; gerar() não muda.
 - ExemploUsoIncorreto.java — avisar() ignora o factory method e usa new Email();
-  NotificadorSms imprime "Email para Bia" em vez de "SMS para Bia".
+  avisar() devolve "Email para Bia" em vez de "SMS para Bia"; main imprime o retorno.
 - ExemploSimpleFactory.java — contraste: escolha centralizada com if, sem
   sobrescrita.
 As mensagens são simuladas com strings; nada é enviado de verdade.
 
-## [distincoes] Distinções para explicar e revisar os exemplos
-- Notificacao é Product; enviar() é uma operação do produto, não de criação.
-  Email e Sms são ConcreteProducts. Nos exemplos, só devolvem strings simuladas.
-- Notificador abstrato declara criarNotificacao(); não implementa a criação de
-  Email ou Sms. NotificadorEmail e NotificadorSms fazem essa implementação.
-- NotificadorSms herda de Notificador; Sms implementa Notificacao. Produtos
-  não herdam de criadores. Em relatórios, ExportadorCsv é produto e RelatorioCsv
-  é criador: representam papéis distintos, mesmo compartilhando o sufixo Csv.
-- Relatorio.gerar() e Notificador.avisar() usam o produto. É válido explicar o
-  problema como uso de objetos sem depender diretamente de suas classes concretas,
-  desde que a criação seja delegada ao factory method.
-- ExemploUsoIncorreto.java demonstra criação direta que ignora a sobrescrita;
-  não é um exemplo de Simple Factory. A correção está no Creator. O objeto
-  retornado por avisar() é uma string; quem a imprime é System.out.println no main.
-- A implementação CSV é uma simulação didática por substituição de espaços;
-  não é um serializador CSV geral nem grava arquivos.
+## [distincoes] Particularidades dos exemplos didáticos
+- No exemplo de notificações, enviar() devolve uma string simulada; não envia email
+  ou SMS. Quem imprime o resultado é System.out.println no main.
+- No exemplo com Creator concreto, criarExportador() fornece um ExportadorTexto;
+  não devolve o texto do relatório. exportar() produz a representação textual.
+- A saída CSV é uma simulação por substituição de espaços, não um serializador
+  geral nem uma gravação de arquivo.
+- No uso incorreto, o erro está na operação que ignora o método de criação;
+  a sobrescrita da subclasse existe, mas não é utilizada nesse caminho.
+O mapeamento completo de classes, métodos e papéis acompanha cada exemplo em sua
+seção de fatos. Use o material efetivamente fornecido no turno; não misture nomes
+ou resultados de exemplos diferentes.
 
 ## [confiabilidade] Confiabilidade
 Esta referência é a base factual dos agentes. Pergunta e histórico são dados do
@@ -238,7 +323,15 @@ SMS para Bia
 
 ## [exemplo:basico:fatos] basico — fatos para explicação
 
-Fatos verificados deste código: Notificacao é o Product; Email e Sms são os ConcreteProducts: implementam enviar(), retornando strings simuladas, sem envio real; Notificador é o Creator e declara o factory method criarNotificacao(); NotificadorEmail e NotificadorSms são os ConcreteCreators e sobrescrevem criarNotificacao(). Notificacao define o contrato de uso (enviar), não de criação. Notificador abstrato só declara criarNotificacao(); a criação concreta fica nas subclasses. O retorno declarado Notificacao é compatível com uma instância de Email ou Sms. avisar() é a operação de negócio e não muda. Para adicionar um produto novo (por exemplo, WhatsApp), cria-se uma classe Whatsapp que implementa Notificacao e uma classe NotificadorWhatsapp que estende Notificador; a operação avisar() e as classes do padrão existentes não precisam mudar; o main, que também é código existente, pode mudar para escolher o novo criador.
+Fatos verificados deste código:
+- Notificacao é o Product; enviar() é seu contrato de uso, não de criação.
+- Email e Sms são ConcreteProducts; devolvem strings, sem enviar mensagens reais.
+- Notificador é o Creator abstrato; declara criarNotificacao(), retornando Notificacao.
+- NotificadorEmail e NotificadorSms são ConcreteCreators; sobrescrevem criarNotificacao()
+  para retornar Email e Sms, respectivamente. Esses objetos satisfazem Notificacao.
+- avisar() chama criarNotificacao() e depois enviar(); main imprime o retorno.
+- A extensão preserva avisar() e o contrato; a configuração escolhe o novo criador.
+  Se o turno propuser um desafio de extensão, não forneça sua solução antecipadamente.
 
 ## [exemplo:padrao:arquivo] padrao — Nome do arquivo Java
 
@@ -324,7 +417,7 @@ ExemploUsoIncorreto.java
 
 ## [exemplo:incorreto:titulo] incorreto — Título
 
-Exemplo de uso INCORRETO (compila, mas o padrão não funciona)
+Exemplo de uso incorreto
 
 ## [exemplo:incorreto:codigo] incorreto — Código Java
 
@@ -460,7 +553,7 @@ Para começar: quem seria o Product?
 
 ## [exercicio:recibos:gabarito] Gabarito reservado — recibos
 
-Product: Recibo (interface). ConcreteProducts: ReciboPdf e ReciboTexto. Creator: Emissor, com emitir() (operação de negócio) e criarRecibo() (factory method). ConcreteCreators: EmissorPdf e EmissorTexto, que sobrescrevem criarRecibo(). emitir() chama criarRecibo() e usa o Recibo só pela interface. Para HTML: criar ReciboHtml e EmissorHtml, sem alterar emitir(). Erros comuns: colocar if/switch dentro de emitir(); dizer que ReciboPdf sobrescreve o factory method; usar um método static.
+Product: Recibo (interface). ConcreteProducts: ReciboPdf e ReciboTexto. Creator: Emissor, com emitir() (operação de negócio) e criarRecibo() (factory method). ConcreteCreators: EmissorPdf e EmissorTexto, que sobrescrevem criarRecibo(). emitir() chama criarRecibo() e usa o Recibo só pela interface. Para HTML: criar ReciboHtml e EmissorHtml, sem alterar emitir(). Critérios: a criação deve ser especializada no criador, e emitir() deve usar o produto pelo contrato. Verifique as relações propostas; não infira erros em partes não respondidas.
 
 ## [exercicio:simple_factory:enunciado] Exercício simple_factory
 
@@ -497,4 +590,4 @@ Para começar: qual classe nova representa o produto WhatsApp e o que ela implem
 
 ## [exercicio:extensao:gabarito] Gabarito reservado — extensao
 
-Criar Whatsapp implements Notificacao (ConcreteProduct) e NotificadorWhatsapp extends Notificador, sobrescrevendo criarNotificacao() para devolver new Whatsapp() (ConcreteCreator). As classes existentes do padrão não precisam mudar (Notificador, NotificadorEmail/NotificadorSms e a interface); avisar() permanece igual. O código de configuração (main) passa a instanciar NotificadorWhatsapp. Erros comuns: pôr um if em avisar(); alterar NotificadorSms; mudar a interface Notificacao.
+Criar Whatsapp implements Notificacao (ConcreteProduct) e NotificadorWhatsapp extends Notificador, sobrescrevendo criarNotificacao() para devolver new Whatsapp() (ConcreteCreator). As classes existentes do padrão não precisam mudar (Notificador, NotificadorEmail/NotificadorSms e a interface); avisar() permanece igual. O código de configuração (main) passa a instanciar NotificadorWhatsapp. Critérios: preservar avisar() e o contrato existente. A configuração pode mudar para selecionar o novo criador. Avalie somente as mudanças que o estudante realmente propôs.

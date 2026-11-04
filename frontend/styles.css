@@ -111,3 +111,6 @@ button { -webkit-tap-highlight-color: transparent; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+.thinking-time { margin-left: 8px; color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.response-time { margin-top: 8px; color: var(--text-faint); font-size: 11px; font-variant-numeric: tabular-nums; }

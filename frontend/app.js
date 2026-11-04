@@ -13,6 +13,8 @@
   const SESSION_KEY = "factory_method_sessao";
   let thread = null;
   let busy = true;
+  let tempoTotal = 0;
+  let respostasConcluidas = 0;
   let sessaoId = recuperarSessao();
 
   function novaSessao() {
@@ -185,6 +187,7 @@
     row.append(avatar, corpo);
     garantirThread().appendChild(row);
     rolar();
+    return row;
   }
 
   function indicador() {
@@ -194,7 +197,7 @@
     row.appendChild(criarAvatar());
     const corpo = document.createElement("div");
     corpo.className = "typing-body";
-    corpo.innerHTML = '<div class="msg-body"><div class="msg-name">Preparando sua resposta…</div>' +
+    corpo.innerHTML = '<div class="msg-body"><div class="msg-name">Preparando sua resposta… <span class="thinking-time" id="thinkingTime" aria-hidden="true" aria-live="off">0,0 s</span></div>' +
       '<div class="typing" role="status" aria-label="A IA está respondendo"><span></span><span></span><span></span></div></div>';
     row.appendChild(corpo);
     garantirThread().appendChild(row);
@@ -223,18 +226,32 @@
     controles();
     status("A IA está respondendo. O modelo local pode levar alguns instantes.");
     indicador();
+    const inicio = performance.now();
+    const formatarTempo = (segundos) => `${segundos.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} s`;
+    const cronometro = setInterval(() => {
+      const contador = $("thinkingTime");
+      if (contador) contador.textContent = formatarTempo((performance.now() - inicio) / 1000);
+    }, 100);
     try {
       const dados = await api("/api/chat", { method: "POST", body: JSON.stringify({ pergunta, sessao_id: sessaoId }) });
       if (typeof dados.resposta !== "string" || !dados.resposta.trim()) throw new Error("O servidor retornou uma resposta vazia. Tente novamente.");
       $("typingRow")?.remove();
-      mensagem(dados.resposta);
-      status("Modelo local · As respostas podem conter imprecisões; confira o material da disciplina.");
+      const duracao = (performance.now() - inicio) / 1000;
+      tempoTotal += duracao;
+      respostasConcluidas++;
+      const row = mensagem(dados.resposta);
+      const tempo = document.createElement("div");
+      tempo.className = "response-time";
+      tempo.textContent = `Respondido em ${formatarTempo(duracao)}`;
+      row.querySelector(".msg-body").appendChild(tempo);
+      status(`Última resposta: ${formatarTempo(duracao)} · Média nesta aba: ${formatarTempo(tempoTotal / respostasConcluidas)} (${respostasConcluidas})`);
     } catch (erro) {
       $("typingRow")?.remove();
       mensagem(erro.message, false, true);
       if (!input.value.trim()) input.value = pergunta;
       status("Não foi possível concluir o envio. Sua pergunta está disponível para tentar novamente.", true);
     } finally {
+      clearInterval(cronometro);
       busy = false;
       controles();
       input.focus();
