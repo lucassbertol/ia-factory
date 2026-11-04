@@ -4,17 +4,20 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Factory IA — Chat</title>
-  <meta name="description" content="Aprenda Factory Method com uma equipe pedagógica e um modelo de IA local." />
-  <link rel="stylesheet" href="./styles.css?v=20261104-sugestoes4" />
+  <meta name="description" content="Explore Factory Method com exemplos em Java e uma IA local." />
+  <link rel="stylesheet" href="./styles.css?v=20261104-chat5" />
 </head>
 <body>
   <!-- Defs de ícones SVG (referenciados via <use>) -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
     <defs>
-      <symbol id="i-sparkles" viewBox="0 0 24 24">
-        <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
-        <path d="M20 3v4" />
-        <path d="M22 5h-4" />
+      <symbol id="i-cube" viewBox="0 0 24 24">
+        <path d="m12 3 9 5v8l-9 5-9-5V8z" />
+        <path d="m3 8 9 5 9-5M12 13v8M7.5 5.5l9 5" />
+      </symbol>
+      <symbol id="i-user" viewBox="0 0 24 24">
+        <circle cx="12" cy="8" r="3.5" />
+        <path d="M5 21v-2a7 7 0 0 1 14 0v2" />
       </symbol>
       <symbol id="i-plus" viewBox="0 0 24 24">
         <path d="M5 12h14" />
@@ -47,18 +50,16 @@
           <span class="topbar-badge">Local</span>
         </div>
         <div class="topbar-actions">
-          <button class="new-chat-btn" id="newChatBtn">Novo chat</button>
+          <button class="new-chat-btn" id="newChatBtn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><use href="#i-plus" /></svg>Novo chat</button>
         </div>
       </header>
 
       <section class="messages" id="messages" aria-live="polite" aria-label="Mensagens">
         <!-- Tela inicial / boas-vindas -->
         <div class="welcome" id="welcome">
-          <div class="welcome-mark" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-sparkles" /></svg></div>
+          <div class="welcome-mark" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-cube" /></svg></div>
           <h1>Vamos aprender Factory Method?</h1>
-          <p>Explore o conceito, veja exemplos em Java ou peça um exercício para praticar.</p>
-
-
+          <p>Do conceito ao código. Explore exemplos em Java e pratique no seu ritmo.</p>
         </div>
         <!-- Mensagens inseridas via app.js -->
       </section>
@@ -79,14 +80,6 @@
     </div>
         </div>
         <form class="composer" id="composer" autocomplete="off">
-          <div class="composer-row">
-            <div class="agent-select-wrap" title="Os agentes são coordenados automaticamente conforme sua pergunta">
-              <span class="agent-icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-bot" /></svg></span>
-              <span class="team-label">Equipe pedagógica</span>
-            </div>
-            <span class="composer-hint" id="charHint">Enter envia · Shift+Enter quebra linha</span>
-          </div>
-
           <div class="composer-box">
             <textarea
               id="input"
@@ -118,6 +111,6 @@
   </dialog>
 
 
-  <script src="./app.js?v=20261104-sugestoes4"></script>
+  <script src="./app.js?v=20261104-chat5"></script>
 </body>
 </html>

@@ -146,19 +146,35 @@
     }
   }
 
-  function mensagem(texto, usuario = false, falha = false) {
-    const row = document.createElement("div");
-    row.className = `msg ${usuario ? "msg-user" : "msg-ai"}${falha ? " msg-error" : ""}`;
+  function criarAvatar(usuario = false) {
     const avatar = document.createElement("span");
     avatar.className = `avatar ${usuario ? "avatar-user" : "avatar-ai"}`;
     avatar.setAttribute("aria-hidden", "true");
-    avatar.textContent = usuario ? "Você" : "IA";
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "1.6");
+    svg.setAttribute("stroke-linecap", "round");
+    svg.setAttribute("stroke-linejoin", "round");
+    const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+    use.setAttribute("href", usuario ? "#i-user" : "#i-cube");
+    svg.appendChild(use);
+    avatar.appendChild(svg);
+    return avatar;
+  }
+
+  function mensagem(texto, usuario = false, falha = false) {
+    const row = document.createElement("div");
+    row.className = `msg ${usuario ? "msg-user" : "msg-ai"}${falha ? " msg-error" : ""}`;
+    row.setAttribute("aria-label", usuario ? "Você" : "Factory IA");
+    const avatar = criarAvatar(usuario);
     const corpo = document.createElement("div");
     corpo.className = "msg-body";
     if (!usuario) {
       const nome = document.createElement("div");
       nome.className = "msg-name";
-      nome.textContent = falha ? "Não foi possível concluir" : "Factory IA · Equipe pedagógica";
+      nome.textContent = falha ? "Não foi possível concluir" : "Factory IA";
       corpo.appendChild(nome);
     }
     const bubble = document.createElement("div");
@@ -175,9 +191,12 @@
     const row = document.createElement("div");
     row.className = "msg msg-ai";
     row.id = "typingRow";
-    row.innerHTML = '<span class="avatar avatar-ai" aria-hidden="true">IA</span>' +
-      '<div class="msg-body"><div class="msg-name">Preparando sua resposta…</div>' +
+    row.appendChild(criarAvatar());
+    const corpo = document.createElement("div");
+    corpo.className = "typing-body";
+    corpo.innerHTML = '<div class="msg-body"><div class="msg-name">Preparando sua resposta…</div>' +
       '<div class="typing" role="status" aria-label="A IA está respondendo"><span></span><span></span><span></span></div></div>';
+    row.appendChild(corpo);
     garantirThread().appendChild(row);
     rolar();
   }
