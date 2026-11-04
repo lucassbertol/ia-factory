@@ -17,10 +17,7 @@ from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
 from .config import OLLAMA_MODEL, PADRAO_ENSINADO, ROOT_DIR
-from .erro import (
-    ErroEntradaVazia, ErroForaDeEscopo, ErroInventicao,
-    ErroModeloIndisponivel, ErroSaidaInesperada, ErroSolucaoPronta,
-)
+from .erro import ErroEntradaVazia, ErroModeloIndisponivel, ErroSaidaInesperada
 from .memoria import MemoriaConversa
 
 logger = logging.getLogger(__name__)
@@ -49,15 +46,13 @@ def responder(pergunta: str, sessao: str) -> JSONResponse:
         # quando alguma dependencia do sistema multiagente estiver ausente.
         from .fluxo import executar_fluxo
 
-        try:
-            resultado = executar_fluxo(pergunta, sessao_id=sessao)
-            resposta, tipo = resultado.resposta, "resposta"
-        except (ErroInventicao, ErroSolucaoPronta, ErroForaDeEscopo) as exc:
-            resposta, tipo = exc.mensagem_usuario, "orientacao"
-            # Preserva tambem as orientacoes exibidas para que o reload do chat
-            # corresponda ao que o estudante viu, sem alterar a CLI.
-            MemoriaConversa(sessao).salvar_turno(pergunta, resposta, "guardiao", intencao="orientacao")
-        return JSONResponse({"resposta": resposta, "tipo": tipo, "sessao_id": sessao})
+        # Recusas e orientacoes ja sao respostas normais do fluxo e ficam salvas
+        # na memoria, entao o reload do chat mostra o mesmo que o estudante viu.
+        resultado = executar_fluxo(pergunta, sessao_id=sessao)
+        return JSONResponse({
+            "resposta": resultado.resposta, "tipo": resultado.tipo, "sessao_id": sessao,
+            "agentes": resultado.agentes, "duracao_segundos": resultado.duracao_segundos,
+        })
     except ErroEntradaVazia as exc:
         return erro(exc.mensagem_usuario, 400)
     except ErroModeloIndisponivel:

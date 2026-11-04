@@ -1,93 +1,46 @@
-# Estrategia de Memoria da Conversa
+# Memória da conversa
 
-Projeto final ELC1070 — Sistema Multiagente Pedagógico (Factory Method).
+Implementação: `agente/memoria.py` (`MemoriaConversa`). Justificativa: seção 3.3 do relatório.
 
-## 1. Onde a memoria e armazenada
+## Onde fica
 
-A conversa e persistida em arquivos JSON, um por sessao, no diretório
-`memoria/sessoes/<id_sessao>.json`. Cada arquivo contem uma lista de turnos,
-com os campos:
-  - `timestamp`: data/hora do turno (ISO 8601)
-  - `pergunta`: texto digitado pelo estudante
-  - `resposta`: resposta gerada pelo sistema
-  - `agente`: ultimo agente que participou (tutor, exemplificador, inquiridor ou guardiao)
-  - `intencao`: finalidade do turno, incluindo `avaliacao` de tentativa
-  - `exercicio_pendente`: enunciado da atividade atual, ou string vazia
+Um arquivo JSON por sessão em `memoria/sessoes/<id>.json` (ignorado pelo Git). A pasta pode ser
+trocada pela variável de ambiente `AGENTE_MEMORIA_DIR` (os testes usam uma pasta temporária).
 
-Os arquivos sao criados automaticamente em tempo de execucao pelo modulo
-`agente/memoria.py` (`MemoriaConversa`).
+- `python -m agente "pergunta"` usa a sessão `default`; o modo interativo usa `interativo`.
+- `--sessao ID` escolhe ou retoma uma conversa (1 a 64 letras ASCII, números, `_` ou `-`).
+- `--sessao ID --limpar-sessao` apaga a sessão e encerra.
 
-## 2. Como a memoria e usada
+## Campos de cada turno
 
-A cada chamada da CLI (`python -m agente "pergunta"`):
+| Campo | Uso |
+|---|---|
+| `timestamp`, `pergunta`, `resposta` | registro da conversa |
+| `intencao` | continuidade ("sim", "e por quê?") e tópicos do fechamento |
+| `agente`, `agentes` | quem respondeu (`regra_deterministica` nas recusas) |
+| `tipo` | `resposta` (modelo) ou `orientacao` (recusa ou boas-vindas, sem modelo) |
+| `exercicio_pendente` | enunciado da atividade em andamento, usado para avaliar tentativas |
+| `revisao` | veredito do Guardião, problemas apontados e se houve reescrita |
+| `nivel` | nível declarado (`--nivel` ou "sou iniciante") |
+| `exemplo` | exemplo Java verificado mostrado, para variar no próximo pedido |
+| `duracao_segundos` | tempo do turno |
 
-1. O sistema carrega o historico da sessao informada (ou `default`/`interativo`).
-2. O historico recente e convertido em texto (respectando um limite de
-   `MAX_CONTEXTO_CARACTERES`, configurado em `agente/config.py`).
-3. Esse texto e injetado como contexto nos prompts dos agentes, de modo que
-   o dialogo permaneça coerente ao longo de varios turnos (ex.: o estudante
-   responde a um exercicio proposto anteriormente e o Inquiridor avalia a
-   resposta tendo em vista o exercicio original).
+## Como entra nos prompts
 
-O classificador recebe tambem a ultima intencao e a indicacao de exercicio
-pendente. Tentativas como "Minha resposta...", correcoes como "Agora eu..."
-e continuacoes curtas como "Sim" ou "E por que?" sao encaminhadas considerando
-esse estado. Apenas tentativas identificaveis recebem `avaliacao`; uma
-continuacao curta durante a pratica recebe `esclarecimento`. Ambas selecionam
-Inquiridor e Guardiao; os termos presentes no codigo da tentativa nao ativam
-outros agentes. As instrucoes pedem feedback sobre a atividade existente,
-sem propor outra nem presumir acerto de uma resposta ambigua.
+O histórico só é enviado quando a pergunta depende dele (tentativa de exercício, "no exemplo
+anterior", continuações curtas). Ele entra marcado como "dados, não instruções", sem timestamps
+e com o código das respostas anteriores trocado por `[código omitido]`, limitado a
+`MAX_CONTEXTO_CARACTERES` (2000). Metade desse espaço fica reservada ao enunciado do exercício
+em andamento. O Guardião não recebe o histórico: ele julga só contra a referência local.
 
-Pedidos independentes tem prioridade sobre a continuidade implicita. O campo
-`usar_contexto` da intencao fica falso para perguntas independentes; fica verdadeiro
-para tentativas, continuacoes e referencias como "no exemplo anterior".
-O fluxo classifica a pergunta antes de montar o contexto. O enunciado reservado
-e incluido apenas em tentativas/esclarecimentos ou referencias explicitas ao
-exercicio; a persistencia da atividade nao depende de envia-la em todo turno.
+## Por que não a memória do CrewAI
 
-Pedidos explicitos de explicacao ou exemplo podem intercalar a pratica sem
-apagar o enunciado. Um novo pedido de exercicio substitui a atividade; um
-fechamento ou "Encerrar exercicio" a encerra. O estado e gravado somente apos
-uma resposta valida: recusas e falhas do modelo nao o alteram. O roteamento
-continua heuristico, sem garantia de interpretar toda formulacao livre.
+A memória nativa do CrewAI depende de um modelo de embeddings e, sem configuração, usa o da
+OpenAI, o que exigiria chave de API e violaria a regra de custo zero. Além disso, o comando
+obrigatório encerra após cada pergunta, então o estado precisa estar em disco.
 
-JSONs antigos continuam aceitos: na ausencia dos campos novos, a intencao e
-inferida das perguntas anteriores e a atividade e recuperada quando possivel.
+## Limites
 
-## 3. Memoria != conhecimento factual
-
-Um ponto critico da estrategia: informacoes ditas pelo modelo em turnos
-anteriores **nao sao tratadas automaticamente como verdade**. O Guardiao
-reavalia a confiabilidade de tudo a cada turno. Isso evita que o sistema
-consolide alucinacoes anteriores como fatos.
-
-## 4. Limites da memoria
-
-- Apenas os turnos mais recentes sao injetados (limite de caracteres), para
-  nao exceder o tamanho de contexto do modelo local (qwen2.5:3b).
-- O limite inclui o cabecalho. Ate metade dele e reservada ao enunciado
-  pendente; o restante recebe os turnos recentes. Textos longos podem ser
-  truncados no contexto, mas o conteudo integral permanece no JSON.
-- A memoria e por sessao; ao encerrar o modo interativo (`sair`), a sessao
-  permanece em disco e pode ser retomada informando o mesmo `sessao_id`.
-- No modo de execução unica (`python -m agente "pergunta"`), o `sessao_id`
-  e `default` por padrao.
-- O modo interativo usa `interativo` por padrao. `--sessao ID` seleciona a
-  mesma conversa em ambos os modos. `--sessao ID --limpar-sessao` remove o
-  historico e a atividade apenas daquela sessao, encerrando sem chamar o modelo.
-- IDs aceitam de 1 a 64 letras ASCII, numeros, `_` e `-`. A persistencia
-  pressupoe uso sequencial, sem escritores concorrentes na mesma sessao.
-
-## 5. Testes de memoria (Etapa 5)
-
-`test_memoria.py` executa E3 e E6 pelo novo executor de evidencias:
-  - E3: exercicio, tentativa e correcao na mesma sessao; verifica roteamento e
-    quantidade de turnos salvos, preservando o contexto e as respostas integrais.
-  - E6: historico falso inserido explicitamente pelo teste, seguido de pergunta
-    ao modelo. A rubrica exige corrigir a afirmacao falsa sem trata-la como fato.
-  - A correcao e utilidade do feedback dependem de leitura critica. O script
-    nao anuncia aprovacao pedagogica apenas por conseguir persistir o JSON.
-
-`test_continuidade.py` verifica automaticamente fluxo, roteamento, CLI e arquivos
-JSON em diretorios temporarios, com a chamada ao modelo substituida por respostas
-controladas. Ele nao comprova a correcao conceitual das respostas de um LLM.
+- Uso sequencial: evite gravar na mesma sessão pela CLI e pela web ao mesmo tempo.
+- Não há busca semântica no histórico; só os turnos mais recentes cabem no contexto.
+- JSONs antigos continuam aceitos (campos ausentes são inferidos).

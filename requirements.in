@@ -1,0 +1,5 @@
+# Dependências diretas (o requirements.txt é gerado a partir daqui, com todas as versões fixadas)
+crewai==1.15.32
+httpx==0.28.1
+starlette==1.10.0
+uvicorn==0.54.0

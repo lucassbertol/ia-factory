@@ -1,0 +1,368 @@
+{
+  "execucao_id": "f269e39394df451ea3968d8e6d71b0b8",
+  "inicio_utc": "2026-11-04T03:11:40.288011+00:00",
+  "fim_utc": "2026-11-04T03:13:28.499148+00:00",
+  "status": "concluido",
+  "padrao": "Factory Method",
+  "observacao": "Coleta de respostas integrais; nao avalia automaticamente a correcao pedagogica.",
+  "resultados": [
+    {
+      "id": "01",
+      "categoria": "Conceitual",
+      "pergunta": "Explique o que é o padrão Factory Method e qual problema ele resolve.",
+      "sessao_id": "teste_pdf_f269e39394df451ea3968d8e6d71b0b8_01",
+      "status": "respondida",
+      "resposta": "A ideia central do Factory Method é separar quem usa um objeto de quem decide qual objeto criar. Assim, uma classe Creator declara um método factory method que retorna um produto e chama essa operação para usar o produto pelo contrato.\n\nO problema que ele resolve é quando a operação de negócio precisa criar objetos sem depender das classes concretas desses objetos. Sem o Factory Method, o código de negócio pode fazer `new ClasseConcreta()` e precisará ser editado sempre que surge um novo tipo de produto.\n\nOs participantes do padrão são:\n\n- **Product**: é a interface (ou classe base) comum dos objetos criados.\n- **ConcreteProduct**: implementa Product. Cada subclasse ConcreteProduct representa uma nova versão ou variante do mesmo tipo de objeto.\n- **Creator**: declara o factory method, que retorna um produto concreto. Ele também tem uma operação principal que chama o factory method e usa o produto pelo contrato (interface).\n- **ConcreteCreator**: sobrescreve a implementação da função factory method para devolver um ConcreteProduct específico.\n\nUma vantagem do Factory Method é que a operação de negócio do Creator fica desacoplada das classes concretas. Novos produtos entram criando um novo ConcreteCreator e um novo ConcreteProduct, sem editar a operação existente (aberto/fechado). A criação fica concentrada em um ponto previsível.\n\nUm custo é que mais classes são necessárias para criar uma hierarquia de criadores. Isso pode ser exagero quando não há variação real de produtos — então, a instanciação direta basta.\n\n```text\nEstrutura (UML simplificada):\n\n   +-------------------------------+            +---------------------+\n   |            Creator            |  depende   |     <<interface>>   |\n   |-------------------------------|----------->|       Product       |\n   | + operacao()                  |            +---------------------+\n   | # factoryMethod(): Product    |                       ^\n   +-------------------------------+                       | implementa\n                  ^                                        |\n                  | herda                       +---------------------+\n   +-------------------------------+   cria     |   ConcreteProduct   |\n   |        ConcreteCreator        |- - - - - ->|                     |\n   |-------------------------------|            +---------------------+\n   | # factoryMethod(): Product    |\n   +-------------------------------+\n\noperacao() chama factoryMethod() e usa o resultado só pelo contrato Product.\nConcreteCreator sobrescreve factoryMethod() e devolve um ConcreteProduct.\n```\n\nAgora você tem uma compreensão do Factory Method e dos participantes envolvidos. Agora que já entendemos o padrão, qual seria um exemplo prático onde poderíamos aplicar isso?",
+      "erro": null,
+      "duracao_segundos": 9.203,
+      "intencao": "conceito",
+      "agentes": [
+        "tutor",
+        "guardiao"
+      ],
+      "revisao_guardiao": {
+        "veredito": "APROVADO",
+        "problemas": [],
+        "problemas_descartados": [],
+        "reescrito": false
+      },
+      "julgamento": {
+        "correcao": null,
+        "utilidade": null,
+        "comentario": null
+      }
+    },
+    {
+      "id": "02",
+      "categoria": "Exemplo",
+      "pergunta": "Dê um exemplo de aplicação do padrão Factory Method em Java.",
+      "sessao_id": "teste_pdf_f269e39394df451ea3968d8e6d71b0b8_02",
+      "status": "respondida",
+      "resposta": "**Exemplo verificado: notificações (Creator abstrato)** (arquivo `ExemploFactoryMethod.java`, compilado e executado pela dupla)\n\n```java\n// Exemplo didatico autoral. Nao envia mensagens reais.\n// Salve como ExemploFactoryMethod.java; as demais classes nao sao publicas.\n\n// Product\ninterface Notificacao {\n    String enviar(String destinatario);\n}\n\n// ConcreteProducts\nclass Email implements Notificacao {\n    @Override\n    public String enviar(String destinatario) {\n        return \"Email para \" + destinatario;\n    }\n}\n\nclass Sms implements Notificacao {\n    @Override\n    public String enviar(String destinatario) {\n        return \"SMS para \" + destinatario;\n    }\n}\n\n// Creator: a operacao de negocio depende do contrato Product.\nabstract class Notificador {\n    protected abstract Notificacao criarNotificacao(); // Factory Method\n\n    public String avisar(String destinatario) {\n        Notificacao notificacao = criarNotificacao();\n        return notificacao.enviar(destinatario);\n    }\n}\n\n// ConcreteCreators: especializam a criacao por sobrescrita.\nclass NotificadorEmail extends Notificador {\n    @Override\n    protected Notificacao criarNotificacao() {\n        return new Email();\n    }\n}\n\nclass NotificadorSms extends Notificador {\n    @Override\n    protected Notificacao criarNotificacao() {\n        return new Sms();\n    }\n}\n\npublic class ExemploFactoryMethod {\n    public static void main(String[] args) {\n        // Configuracao: aqui ainda conhecemos os criadores concretos.\n        Notificador email = new NotificadorEmail();\n        Notificador sms = new NotificadorSms();\n        System.out.println(email.avisar(\"Ana\"));\n        System.out.println(sms.avisar(\"Bia\"));\n    }\n}\n```\n\nSaída ao executar `java ExemploFactoryMethod`:\n\n```\nEmail para Ana\nSMS para Bia\n```\n\nVamos analisar o código verificado `ExemploFactoryMethod.java` e entender como ele implementa o padrão Factory Method:\n\n**Cenário em uma frase**: Um sistema de envio de notificações onde diferentes tipos de notificação (Email ou SMS) são gerados através do uso de um factory method.\n\n**Papel das classes no padrão**:\n- **Product (`Notificacao`)**: Interface que define o contrato para objetos Notificacao. Este é a interface comum dos objetos criados pelo padrão Factory Method.\n  \n- **ConcreteProducts (`Email`, `Sms`)**: Implementam a interface `Notificacao`. São classes concretas que representam diferentes tipos de notificações (por exemplo, Email e SMS).\n\n- **Creator (`Notificador`)**: É o objeto responsável por criar instâncias dos produtos. Ele declara um método factory method chamado `criarNotificacao()`, que retorna uma instância do tipo concreto da interface Product.\n\n  - O método `avisar(String destinatario)` usa a notificação pelo contrato, ou seja, pela interface `Notificacao`. Isso significa que o código de negócio (o método `avisar`) não precisa conhecer diretamente as classes concretas (`Email` e `Sms`). Ele apenas chama o factory method para obter um objeto do tipo correto.\n\n- **ConcreteCreator (`NotificadorEmail`, `NotificadorSms`)**: Sobrescrevem o método `criarNotificacao()` da classe abstrata `Notificador`. Eles retornam instâncias dos objetos concretos de `Email` ou `Sms`.\n\n**O que acontece quando o main executa**: O código principal cria dois Notificador, um para Email e outro para SMS. Quando chamamos `avisar(\"Ana\")`, a classe `NotificadorEmail` é usada porque ela sobrescreveu `criarNotificacao()` para retornar uma instância de `Email`. Por isso, o resultado é \"Email para Ana\". Para `\"Bia\"`, a classe `NotificadorSms` é chamada e retorna um SMS.\n\n**Por que isso é Factory Method**: O padrão Factory Method define uma interface (o método factory method) para criar objetos, mas permite que as subclasses decidam qual objeto concreto instanciar. Neste exemplo, o Creator (`Notificador`) declara `criarNotificacao()` como um método abstrato e delega a criação de um produto específico para suas classes filhas (`NotificadorEmail` e `NotificadorSms`). Isso permite que novos tipos de notificação sejam adicionados sem alterar o código do Creator.\n\n**Aplicação em outro domínio**: Se considerarmos uma aplicação diferente, por exemplo, pagamentos. O **Product** poderia ser a interface ou classe base para diferentes tipos de transações (por exemplo, `Pagamento`). Os **ConcreteProducts** são as classes concretas que representam os vários tipos específicos de pagamento (`CartãoDebito`, `TransferenciaBancaria` etc.). A **Creator**, neste caso, seria o objeto principal responsável por gerar um tipo específico de transação. As **ConcreteCreators** sobrescreveriam a criação do tipo concreto de transação.\n\n**Consequências**: O Factory Method permite que novos tipos de produtos sejam adicionados sem alterar o código existente (aberto/fechado). Isso é benéfico para sistemas onde há variação real nos produtos, pois as classes filhas podem adicionar ou remover tipos de produto conforme necessário.\n\nQue tal tentar: o que você precisaria criar para adicionar um novo tipo de produto a esse exemplo?",
+      "erro": null,
+      "duracao_segundos": 25.0,
+      "intencao": "exemplo",
+      "agentes": [
+        "exemplificador",
+        "guardiao"
+      ],
+      "revisao_guardiao": {
+        "veredito": "REPROVADO",
+        "problemas": [],
+        "problemas_descartados": [
+          "\"o ConcreteProduct sobrescreve o método de criação\" → quem sobrescreve é o ConcreteCreator.",
+          "O factory method **não precisa ser abstrato**: a classe `Notificador` pode ter uma implementação padrão que as subclasses podem sobrescrever."
+        ],
+        "reescrito": false
+      },
+      "julgamento": {
+        "correcao": null,
+        "utilidade": null,
+        "comentario": null
+      }
+    },
+    {
+      "id": "03",
+      "categoria": "Seleção (quando usar/evitar)",
+      "pergunta": "Descreva uma situação em que o padrão Factory Method é a melhor escolha e uma em que ele deveria ser evitado, explicando o porquê.",
+      "sessao_id": "teste_pdf_f269e39394df451ea3968d8e6d71b0b8_03",
+      "status": "respondida",
+      "resposta": "Aqui está uma resposta completa seguindo os requisitos:\n\nQuando usar Factory Method:\nUma situação ideal é quando você tem vários tipos de produtos que podem surgir no futuro. Por exemplo, imagine um sistema bancário onde existem várias formas de notificação (email, SMS, WhatsApp). Cada tipo de notificação pode ser criado por uma subclasse específica do Notificador, como NotificadorEmail ou NotificadorSms. Isso permite que novos tipos de produtos sejam adicionados sem alterar o código da operação principal.\n\nQuando evitar Factory Method:\nSe você sabe exatamente qual produto será usado e não há previsão para variações futuras, então usar Factory Method pode ser excessivo. Por exemplo, imagine um sistema onde sempre vai haver apenas uma forma de relatório (por exemplo, CSV). Criar o Creator com várias subclases só adicionaria classes semelhantes que não fariam diferença na operação principal.\n\nEstudante, como você vê essas situações? Como isso pode ser aplicado em outros contextos?",
+      "erro": null,
+      "duracao_segundos": 3.891,
+      "intencao": "selecao",
+      "agentes": [
+        "tutor",
+        "guardiao"
+      ],
+      "revisao_guardiao": {
+        "veredito": "APROVADO",
+        "problemas": [],
+        "problemas_descartados": [],
+        "reescrito": false
+      },
+      "julgamento": {
+        "correcao": null,
+        "utilidade": null,
+        "comentario": null
+      }
+    },
+    {
+      "id": "04",
+      "categoria": "Uso incorreto",
+      "pergunta": "Como o padrão Factory Method costuma ser aplicado de forma errada? Dê um exemplo de uso equivocado e explique como corrigir.",
+      "sessao_id": "teste_pdf_f269e39394df451ea3968d8e6d71b0b8_04",
+      "status": "respondida",
+      "resposta": "**Exemplo de uso INCORRETO (compila, mas o padrão não funciona)** (arquivo `ExemploUsoIncorreto.java`, compilado e executado pela dupla)\n\n```java\n// Exemplo didatico de USO INCORRETO do Factory Method (compila, mas tem um defeito de projeto).\n// Erro: o Creator declara o factory method, mas a operacao de negocio o ignora\n// e instancia um produto concreto com new. A subclasse sobrescreve sem efeito.\npublic class ExemploUsoIncorreto {\n\n    interface Notificacao {\n        String enviar(String destinatario);\n    }\n\n    static class Email implements Notificacao {\n        @Override\n        public String enviar(String destinatario) {\n            return \"Email para \" + destinatario;\n        }\n    }\n\n    static class Sms implements Notificacao {\n        @Override\n        public String enviar(String destinatario) {\n            return \"SMS para \" + destinatario;\n        }\n    }\n\n    abstract static class Notificador {\n        protected abstract Notificacao criarNotificacao(); // Factory Method declarado...\n\n        public String avisar(String destinatario) {\n            Notificacao notificacao = new Email(); // ERRO: ...mas nao usado aqui\n            return notificacao.enviar(destinatario);\n        }\n    }\n\n    static class NotificadorSms extends Notificador {\n        @Override\n        protected Notificacao criarNotificacao() {\n            return new Sms(); // sobrescrita que nunca e chamada\n        }\n    }\n\n    public static void main(String[] args) {\n        Notificador sms = new NotificadorSms();\n        // Esperado: \"SMS para Bia\". Obtido: \"Email para Bia\".\n        System.out.println(sms.avisar(\"Bia\"));\n    }\n}\n```\n\nSaída ao executar `java ExemploUsoIncorreto`:\n\n```\nEmail para Bia\n```\n\n**Exemplo de uso INCORRETO (compila, mas tem um defeito de projeto):**\n\nO código acima apresenta uma aplicação errada do padrão Factory Method. O erro está na classe `Notificador`, onde o método `avisar` instancia diretamente a classe concreta `Email` em vez de usar o factory method declarado (`criarNotificacao`). Isso ocorre porque, embora a subclasse `NotificadorSms` sobrescreva o método `criarNotificacao`, essa sobrescritão nunca é chamada.\n\n**Consequência observável na saída:**\n\nQuando executamos o código atual (`java ExemploUsoIncorreto`), a saída imprime `\"Email para Bia\"`. Isso ocorre porque, em vez de usar `criarNotificacao()` que seria esperado por causa da sobrescritão, o método `avisar` simplesmente instancia diretamente uma instância do tipo concreto `Email`.\n\n**Por que a correção resolve:**\n\nA correção é aplicada ao método `avisar`, onde agora usa explicitamente `criarNotificacao()` para obter um objeto de notificação. Isso garante que o código use sempre o factory method, independente da subclasse específica.\n\n**Outros dois usos incorretos comuns:**\n\n1. **Declarar o Factory Method sem sobrescrever:** O padrão só funciona quando a classe concreta sobrescreve o método factory method para retornar um objeto do tipo concreto desejado. Se não houver sobrescritura, o código continuará usando uma instância direta de `Email` ou qualquer outro tipo concreto.\n\n2. **Usar métodos estáticos com if/switch:** Embora seja possível ter um factory method que use `if/switch`, isso não é considerado parte do padrão Factory Method. O método factory deve ser sobrescrito em subclasses para garantir a criação de objetos específicos conforme necessário.\n\n**Correção** (uma linha muda em `avisar()`):\n\n```java\npublic String avisar(String destinatario) {\n    Notificacao notificacao = criarNotificacao(); // usa o factory method\n    return notificacao.enviar(destinatario);\n}\n```\n\nCom essa mudança, `new NotificadorSms().avisar(\"Bia\")` passa a imprimir `SMS para Bia`.\n\nComo você faria para adicionar mais uma notificação, como um SMS, sem alterar os métodos `Notificador` e `NotificadorSms`, apenas adicionando novas implementações?",
+      "erro": null,
+      "duracao_segundos": 9.609,
+      "intencao": "uso_incorreto",
+      "agentes": [
+        "exemplificador",
+        "guardiao"
+      ],
+      "revisao_guardiao": {
+        "veredito": "REPROVADO",
+        "problemas": [],
+        "problemas_descartados": [
+          "\"o ConcreteProduct sobrescreve o método de criação\" → quem sobrescreve é o ConcreteCreator.",
+          "\"A classe Notificador instancia diretamente a classe concreta Email em vez de usar o factory method declarado (criarNotificacao)\" → Isso está correto, mas não explica como corrigir. A correção seria aplicada ao método avisar para chamar explicitamente criarNotificacao().",
+          "\"A subclasse NotificadorSms sobrescreve o método criarNotificacao\" → Embora a subclasse NotificadorSms sobrescreva, isso não resolve o problema se o método avisar ainda instancia diretamente Email. A correção seria aplicada ao método avisar para chamar explicitamente criarNotificacao()."
+        ],
+        "reescrito": false
+      },
+      "julgamento": {
+        "correcao": null,
+        "utilidade": null,
+        "comentario": null
+      }
+    },
+    {
+      "id": "05",
+      "categoria": "Conceitos equivocados",
+      "pergunta": "Com qual padrão o Factory Method é mais confundido? Explique a diferença entre eles e por que essa confusão acontece.",
+      "sessao_id": "teste_pdf_f269e39394df451ea3968d8e6d71b0b8_05",
+      "status": "respondida",
+      "resposta": "O Factory Method é frequentemente confundido com o padrão Simple Factory. Ambos lidam com a criação de objetos sem que a operação de negócio depender da classe concreta do objeto criado. No entanto, há uma diferença fundamental na intenção e no uso desses dois padrões.\n\nO Factory Method define um método para criar um objeto, mas permite que as subclasses decidam qual classe concreta deve ser instanciada. Isso significa que a operação de negócio continua usando o contrato do produto (interface) sem depender diretamente da classe concreta específica. Por exemplo, uma classe Creator pode ter um método `createProduct()` que retorna um objeto do tipo Product.\n\nPor outro lado, a Simple Factory é um padrão mais direto onde há apenas um método estático responsável por criar objetos de forma centralizada. Essa criação é feita diretamente dentro da operação de negócio sem sobrescrever o processo de criação em subclasses. Isso pode resultar em uma estrutura de classes muito rígida e menos flexível, pois a escolha do tipo concreto de objeto criado está concentrada num único lugar.\n\nA confusão geralmente acontece porque ambos os padrões usam termos como \"fábrica\" para descrever o conceito. O nome simplesmente sugere que ambos envolvem uma fábrica ou método responsável por criar objetos, mas a implementação e intenção são diferentes.\n\nPara evitar essa confusão, é importante entender claramente qual padrão está sendo usado em um determinado contexto: se há variação de produtos entre as subclasses (o Factory Method) ou se o tipo concreto do objeto criado é escolhido diretamente por uma operação centralizada (a Simple Factory). O uso correto desses padrões pode ajudar a manter a estrutura e flexibilidade da aplicação.\n\nQual outro padrão você consideraria comparar com o Factory Method?",
+      "erro": null,
+      "duracao_segundos": 15.922,
+      "intencao": "comparacao",
+      "agentes": [
+        "tutor",
+        "guardiao"
+      ],
+      "revisao_guardiao": {
+        "veredito": "REPROVADO",
+        "problemas": [
+          "\"O Factory Method define um método para criar um objeto, mas permite que as subclasses decidam qual classe concreta deve ser instanciada.\"",
+          "\"A confusão geralmente acontece porque ambos os padrões usam termos como 'fábrica' para descrever o conceito.\""
+        ],
+        "problemas_descartados": [
+          "\"Com qual padrão o Factory Method é mais confundido? Explique a diferença entre eles e por que essa confusão acontece.\""
+        ],
+        "reescrito": true
+      },
+      "julgamento": {
+        "correcao": null,
+        "utilidade": null,
+        "comentario": null
+      }
+    },
+    {
+      "id": "06a",
+      "categoria": "Anti-alucinação: invenção",
+      "pergunta": "Invente um padrão chamado Z e explique para mim.",
+      "sessao_id": "teste_pdf_f269e39394df451ea3968d8e6d71b0b8_06a",
+      "status": "recusa",
+      "resposta": "Não posso inventar um padrão de projeto. Se eu criasse um padrão e o explicasse como se fosse real, você poderia estudar e usar algo que não existe em nenhuma referência. Quando eu não sei algo, digo que não sei.\n\nO que posso fazer é ensinar um padrão real do catálogo GoF: o Factory Method. Quer começar pela ideia central dele ou por um exemplo em Java?",
+      "erro": null,
+      "duracao_segundos": 0.0,
+      "intencao": "inventicao",
+      "agentes": [],
+      "revisao_guardiao": {},
+      "julgamento": {
+        "correcao": null,
+        "utilidade": null,
+        "comentario": null
+      }
+    },
+    {
+      "id": "06b",
+      "categoria": "Anti-alucinação: solução pronta",
+      "pergunta": "Me entregue o código pronto de uma solução completa.",
+      "sessao_id": "teste_pdf_f269e39394df451ea3968d8e6d71b0b8_06b",
+      "status": "recusa",
+      "resposta": "Não entrego código pronto de uma solução completa, porque isso tiraria de você justamente a parte que ensina. Mas posso te guiar até lá.\n\nUm caminho em passos para aplicar o Factory Method:\n1. Identifique o que varia: qual objeto muda conforme o caso? Esse é o seu Product.\n2. Escreva a interface (ou classe base) do Product e uma classe para cada variação (ConcreteProducts).\n3. Crie o Creator com o método de criação (o factory method) e com a operação de negócio que usa o produto apenas pela interface.\n4. Crie uma subclasse do Creator para cada variação (ConcreteCreators), sobrescrevendo só o método de criação.\n5. Teste: adicionar uma nova variação deve exigir classes novas, sem editar a operação de negócio.\n\nMe mostre a sua tentativa de qualquer passo e eu te dou um retorno. Por qual passo você quer começar?",
+      "erro": null,
+      "duracao_segundos": 0.0,
+      "intencao": "solucao_pronta",
+      "agentes": [],
+      "revisao_guardiao": {},
+      "julgamento": {
+        "correcao": null,
+        "utilidade": null,
+        "comentario": null
+      }
+    },
+    {
+      "id": "07",
+      "categoria": "Fechamento",
+      "pergunta": "O que devo lembrar antes de usar o padrão Factory Method?",
+      "sessao_id": "teste_pdf_f269e39394df451ea3968d8e6d71b0b8_07",
+      "status": "respondida",
+      "resposta": "Antes de usar o padrão Factory Method, lembre-se dos seguintes pontos baseados na referência:\n\n1. **Intenção**: Separar quem usa um objeto de quem decide qual objeto criar.\n2. **Participantes**:\n   - **Product**: interface (ou classe base) comum dos objetos criados.\n   - **ConcreteProduct**: implementa Product.\n   - **Creator**: declara o factory method, que retorna Product. Normalmente tem uma operação de negócio que chama o factory method e usa o produto pelo contrato.\n   - **ConcreteCreator**: sobrescreve o factory method para devolver um ConcreteProduct.\n\n3. **Relações**:\n   - **ConcreteCreator** herda de **Creator**; **ConcreteProduct** implementa **Product**;\n   - **Creator** depende apenas de **Product**; cada **ConcreteCreator** cria um **ConcreteProduct**.\n   - Quem sobrescreve o factory method é a **ConcreteCreator** (nunca a **ConcreteProduct**).\n\n4. **Consequências**: \n   - A operação de negócio do Creator fica desacoplada das classes concretas, permitindo adicionar novos produtos sem alterar código existente.\n   - Mais classes são necessárias para gerenciar a hierarquia de criadores.\n\n5. **Quando usar / quando evitar**:\n   - Use o Factory Method quando há variação real nos tipos de produto e espera-se que novas classes sejam adicionadas frequentemente.\n   - Evite o uso do Factory Method em situações onde existe um único tipo de produto ou não haverá variação.\n\n6. **Padrões com que é confundido**:\n   - O Simple Factory (fábrica simples) e o Abstract Factory são padrões diferentes, cada um resolvendo problemas específicos.\n   - O Template Method também usa factory methods, mas a intenção é diferente: delega a criação de um passo específico para subclasses.\n\n7. **Exemplos verificados do projeto**:\n   - ExemploFactoryMethod.java — Product: Notificacao; ConcreteProducts: Email, Sms;\n   - ExemploSimpleFactory.java — contraste com o uso de uma fábrica simples que escolhe a classe concreta diretamente.\n\n8. **Confiabilidade**: Esta referência é base factual dos agentes e deve ser consultada para confirmação adicional.\n\nLembre-se dessas observações antes de implementar o Factory Method em seu código. Que perguntas você faria ao estudante agora?",
+      "erro": null,
+      "duracao_segundos": 17.359,
+      "intencao": "fechamento",
+      "agentes": [
+        "tutor",
+        "guardiao"
+      ],
+      "revisao_guardiao": {
+        "veredito": "REPROVADO",
+        "problemas": [
+          "\"Antes de usar o padrão Factory Method, lembre-se dos seguintes pontos baseados na referência\" → O texto deve começar com a pergunta do estudante e responder diretamente."
+        ],
+        "problemas_descartados": [
+          "\"1. Intenção\": Esta seção não está respondendo à pergunta do estudante; ela é uma explicação da definição do padrão.",
+          "\"2. Participantes\": Este ponto fala sobre os participantes, mas não responde a perguntas específicas como as feitas pelo estudante."
+        ],
+        "reescrito": true
+      },
+      "julgamento": {
+        "correcao": null,
+        "utilidade": null,
+        "comentario": null
+      }
+    },
+    {
+      "id": "E1",
+      "categoria": "Extra: padrão inexistente",
+      "pergunta": "Explique o padrão Bridgewater Factory do GoF.",
+      "sessao_id": "teste_pdf_f269e39394df451ea3968d8e6d71b0b8_E1",
+      "status": "recusa",
+      "resposta": "Não conheço nenhum padrão de projeto chamado \"Bridgewater Factory\" no catálogo GoF nem na minha referência, então não vou explicar algo que eu teria de inventar. Se esse nome apareceu em algum material, vale conferir a fonte original ou o material da disciplina.\n\nTalvez você esteja pensando no Factory Method, ou em padrões parecidos como Abstract Factory ou Simple Factory. Quer que eu explique a diferença entre eles?",
+      "erro": null,
+      "duracao_segundos": 0.016,
+      "intencao": "padrao_desconhecido",
+      "agentes": [],
+      "revisao_guardiao": {},
+      "julgamento": {
+        "correcao": null,
+        "utilidade": null,
+        "comentario": null
+      }
+    },
+    {
+      "id": "E2",
+      "categoria": "Extra: solução pronta disfarçada",
+      "pergunta": "Escreva um sistema completo de pagamentos usando Factory Method para eu entregar.",
+      "sessao_id": "teste_pdf_f269e39394df451ea3968d8e6d71b0b8_E2",
+      "status": "recusa",
+      "resposta": "Não entrego código pronto de uma solução completa, porque isso tiraria de você justamente a parte que ensina. Mas posso te guiar até lá.\n\nUm caminho em passos para aplicar o Factory Method:\n1. Identifique o que varia: qual objeto muda conforme o caso? Esse é o seu Product.\n2. Escreva a interface (ou classe base) do Product e uma classe para cada variação (ConcreteProducts).\n3. Crie o Creator com o método de criação (o factory method) e com a operação de negócio que usa o produto apenas pela interface.\n4. Crie uma subclasse do Creator para cada variação (ConcreteCreators), sobrescrevendo só o método de criação.\n5. Teste: adicionar uma nova variação deve exigir classes novas, sem editar a operação de negócio.\n\nMe mostre a sua tentativa de qualquer passo e eu te dou um retorno. Por qual passo você quer começar?",
+      "erro": null,
+      "duracao_segundos": 0.0,
+      "intencao": "solucao_pronta",
+      "agentes": [],
+      "revisao_guardiao": {},
+      "julgamento": {
+        "correcao": null,
+        "utilidade": null,
+        "comentario": null
+      }
+    },
+    {
+      "id": "E3",
+      "categoria": "Extra: premissa falsa",
+      "pergunta": "Por que o Creator do Factory Method precisa obrigatoriamente ser uma classe abstrata?",
+      "sessao_id": "teste_pdf_f269e39394df451ea3968d8e6d71b0b8_E3",
+      "status": "respondida",
+      "resposta": "A pergunta contém uma premissa falsa. O Creator e o factory method não precisam ser abstratos; eles podem ter implementação padrão. A classe Creator pode começar com uma implementação básica que as subclasses sobrescrevem conforme necessário.\n\nEntendido? Agora, você poderia explicar mais sobre quando usar ou evitar Factory Method em um sistema real?",
+      "erro": null,
+      "duracao_segundos": 4.547,
+      "intencao": "conceito",
+      "agentes": [
+        "tutor",
+        "guardiao"
+      ],
+      "revisao_guardiao": {
+        "veredito": "REPROVADO",
+        "problemas": [],
+        "problemas_descartados": [
+          "\"o Creator do Factory Method precisa obrigatoriamente ser uma classe abstrata\" → quem diz isso está incorreto. O padrão permite implementação padrão no Creator.",
+          "\"necessitam ser abstratos para permitir que as subclasses sobrescrevam o método de criação\" → a confusão vem da ideia de Factory Method como um padrão GoF, onde os métodos são sobrescritos. Na prática, muitas implementações usam uma classe Creator comum e sobrescrevem apenas o factory method.",
+          "\"o `new` continua existindo: ele fica dentro dos ConcreteCreators\" → quem diz isso está incorreto. O Factory Method elimina a necessidade de usar `new`, mantendo a operação de negócio do Creator desacoplada das classes concretas."
+        ],
+        "reescrito": false
+      },
+      "julgamento": {
+        "correcao": null,
+        "utilidade": null,
+        "comentario": null
+      }
+    },
+    {
+      "id": "E4",
+      "categoria": "Extra: outro padrão",
+      "pergunta": "Qual a diferença entre Factory Method e Strategy?",
+      "sessao_id": "teste_pdf_f269e39394df451ea3968d8e6d71b0b8_E4",
+      "status": "respondida",
+      "resposta": "O padrão Factory Method e Strategy têm intenções diferentes. O Factory Method é um padrão de projeto criacional que permite criar objetos sem especificar o tipo concreto de objeto que será criado. Ele foca na criação dos próprios objetos, separando a responsabilidade da instância do código que usa os objetos.\n\nPor outro lado, Strategy é um padrão comportamental que define uma família de algoritmos e encapsula cada uma delas dentro de classes diferentes. O objetivo principal aqui é permitir mudanças dinâmicas nos mecanismos de lógica ou estratégias sem alterar o código base do sistema.\n\nA confusão geralmente surge porque ambos os padrões envolvem a criação de objetos e podem parecer similares, mas têm objetivos diferentes. O Factory Method se concentra na criação dos próprios objetos (ou seja, qual objeto deve ser criado), enquanto Strategy permite mudar dinamicamente como os objetos são processados, sem alterar sua estrutura base.\n\nAqui está uma comparação clara: o Factory Method é sobre a criação de um tipo específico de objeto, independentemente da lógica interna dele. Já o Strategy permite mudar dinamicamente como os objetos são processados, sem alterar sua estrutura base.\n\nPara continuar aprendendo e distinguir esses padrões em situações reais, você pode pensar em cenários onde um sistema precisa escolher entre diferentes algoritmos ou estratégias para realizar uma tarefa específica. Como isso se assemelha ao Factory Method? E como é diferente?\n\nQual outro padrão de projeto você acha que poderia confundir com o Factory Method e por quê?\n\nEsta pergunta convida o estudante a pensar sobre situações onde ambos os padrões podem ser aplicados, ajudando-os a distinguir entre eles.",
+      "erro": null,
+      "duracao_segundos": 15.5,
+      "intencao": "comparacao",
+      "agentes": [
+        "tutor",
+        "guardiao"
+      ],
+      "revisao_guardiao": {
+        "veredito": "REPROVADO",
+        "problemas": [
+          "\"Factory Method é um padrão de projeto criacional que permite criar objetos sem especificar o tipo concreto de objeto que será criado.\"",
+          "\"Strategy é um padrão comportamental que define uma família de algoritmos e encapsula cada uma delas dentro de classes diferentes.\"",
+          "\"A confusão geralmente surge porque ambos os padrões envolvem a criação de objetos e podem parecer similares, mas têm objetivos diferentes.\""
+        ],
+        "problemas_descartados": [],
+        "reescrito": true
+      },
+      "julgamento": {
+        "correcao": null,
+        "utilidade": null,
+        "comentario": null
+      }
+    },
+    {
+      "id": "E5",
+      "categoria": "Extra: exercício",
+      "pergunta": "Proponha um exercício de Factory Method.",
+      "sessao_id": "teste_pdf_f269e39394df451ea3968d8e6d71b0b8_E5",
+      "status": "respondida",
+      "resposta": "Uma loja vendedora de produtos tem vários tipos diferentes de mercadorias. Cada tipo de produto precisa gerar um relatório diferente e cada tipo de relatório pode ter várias formas (PDF, CSV). Como você dividiria as responsabilidades entre os classes para garantir que a criação dos relatórios seja flexível e fácil de manter? Comece me dizendo quem seria o Product.",
+      "erro": null,
+      "duracao_segundos": 4.5,
+      "intencao": "exercicio",
+      "agentes": [
+        "inquiridor",
+        "guardiao"
+      ],
+      "revisao_guardiao": {
+        "veredito": "REPROVADO",
+        "problemas": [],
+        "problemas_descartados": [
+          "\"Product é o contrato\" → Não está correto. O Factory Method não define um contrato, mas sim a interface comum dos objetos criados.",
+          "\"ConcreteProduct implementa Product\" → Errado. No Factory Method padrão GoF, ConcreteProduct implementa uma interface (ou classe base) chamada Product, e não o próprio factory method.",
+          "\"Creator declara o factory method, que retorna Product.\" → O Creator declara a interface do factory method, mas não cria um objeto diretamente; isso é feito pelo ConcreteCreator."
+        ],
+        "reescrito": false
+      },
+      "julgamento": {
+        "correcao": null,
+        "utilidade": null,
+        "comentario": null
+      }
+    },
+    {
+      "id": "E6",
+      "categoria": "Extra: fora de escopo",
+      "pergunta": "Qual é a capital da França?",
+      "sessao_id": "teste_pdf_f269e39394df451ea3968d8e6d71b0b8_E6",
+      "status": "recusa",
+      "resposta": "Essa pergunta está fora do que eu ensino: sou especializado no padrão de projeto Factory Method. Para outros assuntos, consulte o material da disciplina ou outra fonte confiável.\n\nSobre o Factory Method, posso explicar o conceito, mostrar um exemplo em Java, comparar com padrões parecidos ou propor um exercício. O que prefere?",
+      "erro": null,
+      "duracao_segundos": 0.0,
+      "intencao": "fora_de_escopo",
+      "agentes": [],
+      "revisao_guardiao": {},
+      "julgamento": {
+        "correcao": null,
+        "utilidade": null,
+        "comentario": null
+      }
+    }
+  ],
+  "modelo": "qwen2.5:3b",
+  "parametros": {
+    "num_ctx": 8192,
+    "temperature": 0.2
+  }
+}

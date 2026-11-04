@@ -1,12 +1,18 @@
-"""Gerenciamento da memoria da conversa.
+"""Memória da conversa, persistida em JSON (um arquivo por sessão).
 
-A memoria eh persistida em arquivos JSON, um por sessao, para que o dialogo
-permaneça coerente entre turnos mesmo quando a CLI encerra apos cada comando
-(`python -m agente "pergunta"`).
+Por que não a memória nativa do CrewAI: ela depende de um modelo de
+embeddings e, sem configuração, usa o da OpenAI, o que exigiria chave de API e
+violaria a regra de custo zero. Além disso, a CLI encerra após cada comando
+(`python -m agente "pergunta"`), então o estado precisa ir para o disco.
 
-Memoria != conhecimento factual: informacoes ditas pelo modelo em turnos
-anteriores nao sao tratadas automaticamente como verdade; o Guardião
-reavalia a confiabilidade a cada turno.
+O que é guardado por turno: pergunta, resposta, intenção, agentes envolvidos,
+veredito do Guardião, exercício em andamento, nível declarado e exemplo
+verificado mostrado. Isso permite: avaliar a tentativa contra o enunciado
+salvo, não repetir o mesmo exemplo, adaptar a linguagem ao nível e fazer um
+fechamento que retome o que foi estudado.
+
+Memória não é conhecimento: o histórico entra nos prompts marcado como
+"dados, não instruções", e a referência local continua sendo a base factual.
 """
 
 from __future__ import annotations
@@ -14,18 +20,28 @@ from __future__ import annotations
 import json
 import re
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
-from .config import MEMORIA_DIR, MAX_CONTEXTO_CARACTERES
+from .config import MAX_CONTEXTO_CARACTERES, MEMORIA_DIR
+
+_ROTULOS_TOPICO = {
+    "conceito": "conceito e participantes",
+    "exemplo": "exemplo em Java",
+    "selecao": "quando usar e quando evitar",
+    "comparacao": "comparação com outros padrões",
+    "uso_incorreto": "usos incorretos",
+    "exercicio": "exercício prático",
+    "avaliacao": "correção de tentativa",
+    "diagnostico": "esclarecimento de dúvidas",
+}
 
 
 class MemoriaConversa:
-    """Carrega e salva o historico de turnos de uma sessao."""
+    """Carrega e salva o histórico de turnos de uma sessão."""
 
     def __init__(self, sessao_id: str) -> None:
         if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", sessao_id):
-            raise ValueError("Sessao invalida: use de 1 a 64 letras, numeros, '_' ou '-'.")
+            raise ValueError("Sessão inválida: use de 1 a 64 letras, números, '_' ou '-'.")
         self.sessao_id = sessao_id
         self.caminho = MEMORIA_DIR / f"{sessao_id}.json"
         MEMORIA_DIR.mkdir(parents=True, exist_ok=True)
@@ -47,10 +63,14 @@ class MemoriaConversa:
         resposta: str,
         agente: str,
         intencao: str = "",
+        **extras: Any,
     ) -> None:
-        """Adiciona um turno ao historico e persiste em disco."""
-        turno = {
-            "timestamp": datetime.now().isoformat(),
+        """Adiciona um turno ao histórico e persiste em disco.
+
+        extras aceitos: agentes, tipo, revisao, nivel, exemplo, duracao_segundos.
+        """
+        turno: dict[str, Any] = {
+            "timestamp": datetime.now().isoformat(timespec="seconds"),
             "pergunta": pergunta,
             "resposta": resposta,
             "agente": agente,
@@ -60,6 +80,7 @@ class MemoriaConversa:
                 "" if intencao == "fechamento" else self.exercicio_pendente
             ),
         }
+        turno.update({k: v for k, v in extras.items() if v not in (None, "", [])})
         self._historico.append(turno)
         self._persistir()
 
@@ -69,31 +90,34 @@ class MemoriaConversa:
             json.dump(self._historico, f, ensure_ascii=False, indent=2)
         tmp.replace(self.caminho)
 
-    def contexto_texto(self, incluir_exercicio: bool = True) -> str:
-        """Retorna o historico recente como texto para injeção nos prompts.
+    @staticmethod
+    def _resumir_resposta(texto: str) -> str:
+        # Código já verificado não precisa voltar ao prompt: economiza contexto.
+        return re.sub(r"```.*?```", "[código omitido]", texto, flags=re.DOTALL).strip()
 
-        So os ultimos turnos sao usados, respeitando MAX_CONTEXTO_CARACTERES,
-        para evitar exceder o limite de contexto do modelo local.
-        """
+    def contexto_texto(self, incluir_exercicio: bool = True) -> str:
+        """Histórico recente como texto para os prompts (limitado em caracteres)."""
         if not self._historico:
             return ""
         limite = max(0, MAX_CONTEXTO_CARACTERES)
-        cabecalho = "=== Historico da conversa (sessao " + self.sessao_id + ") ===\n"
+        cabecalho = ""
         if incluir_exercicio and self.exercicio_pendente:
-            # Reserva espaco para o enunciado mesmo apos varios feedbacks.
-            cabecalho += "Exercicio em andamento (avalie a tentativa com base nele):\n"
-            cabecalho += self.exercicio_pendente[:limite // 2] + "\n\n"
+            # Reserva espaço para o enunciado mesmo após vários feedbacks.
+            cabecalho = (
+                "Exercício em andamento (avalie a tentativa com base nele):\n"
+                + self._resumir_resposta(self.exercicio_pendente)[: limite // 2] + "\n\n"
+            )
         cabecalho = cabecalho[:limite]
         disponivel = limite - len(cabecalho)
         partes: list[str] = []
         for turno in reversed(self._historico):
             bloco = (
-                f"[{turno['timestamp']}] Estudante: {turno['pergunta']}\n"
-                f"[{turno['timestamp']}] Sistema ({turno['agente']}): {turno['resposta']}\n"
+                f"Estudante: {turno['pergunta']}\n"
+                f"Sistema: {self._resumir_resposta(turno['resposta'])}\n"
             )
             if len(bloco) > disponivel:
                 if not partes and disponivel > 0:
-                    partes.insert(0, bloco[:disponivel])
+                    partes.insert(0, bloco[-disponivel:])
                 break
             partes.insert(0, bloco)
             disponivel -= len(bloco)
@@ -101,7 +125,7 @@ class MemoriaConversa:
 
     @property
     def historico(self) -> list[dict[str, Any]]:
-        """Retorna os turnos para exibicao, sem expor a lista interna mutavel."""
+        """Turnos para exibição, sem expor a lista interna mutável."""
         return [turno.copy() for turno in self._historico]
 
     @property
@@ -111,7 +135,7 @@ class MemoriaConversa:
         ultimo = self._historico[-1]
         if ultimo.get("intencao"):
             return ultimo["intencao"]
-        # Compatibilidade com os JSONs anteriores a introducao do estado.
+        # Compatibilidade com JSONs anteriores à introdução do estado.
         from .fluxo_heuristico import classificar_intencao
         return classificar_intencao(ultimo["pergunta"]).tipo
 
@@ -122,7 +146,7 @@ class MemoriaConversa:
         ultimo = self._historico[-1]
         if "exercicio_pendente" in ultimo:
             return ultimo["exercicio_pendente"]
-        # Sessoes antigas nao possuem estado: recupera a pratica mais recente.
+        # Sessões antigas não possuem estado: recupera a prática mais recente.
         from .fluxo_heuristico import classificar_intencao
         for turno in reversed(self._historico):
             tipo = turno.get("intencao") or classificar_intencao(turno["pergunta"]).tipo
@@ -132,8 +156,43 @@ class MemoriaConversa:
                 return turno["resposta"]
         return ""
 
+    @property
+    def nivel(self) -> str:
+        """Último nível declarado pelo estudante nesta sessão."""
+        for turno in reversed(self._historico):
+            if turno.get("nivel"):
+                return turno["nivel"]
+        return ""
+
+    @property
+    def exercicios_propostos(self) -> list[str]:
+        return [t["exercicio"] for t in self._historico if t.get("exercicio")]
+
+    @property
+    def exercicio_atual(self) -> str:
+        """Identificador do exercício em andamento (para o Inquiridor usar o gabarito)."""
+        if not self.exercicio_pendente:
+            return ""
+        for turno in reversed(self._historico):
+            if turno.get("intencao") == "exercicio":
+                return turno.get("exercicio", "")
+        return ""
+
+    @property
+    def exemplos_mostrados(self) -> list[str]:
+        return [t["exemplo"] for t in self._historico if t.get("exemplo")]
+
+    @property
+    def topicos_estudados(self) -> list[str]:
+        vistos: list[str] = []
+        for turno in self._historico:
+            rotulo = _ROTULOS_TOPICO.get(turno.get("intencao", ""))
+            if rotulo and rotulo not in vistos:
+                vistos.append(rotulo)
+        return vistos
+
     def limpar(self) -> None:
-        """Remove o historico da sessao (uso em testes/debug)."""
+        """Remove o histórico da sessão."""
         self._historico = []
         if self.caminho.exists():
             self.caminho.unlink()

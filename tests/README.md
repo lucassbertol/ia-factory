@@ -1,81 +1,31 @@
-# Coleta das perguntas obrigatórias do PDF
+# Testes
 
-O único script desta pasta, `test_perguntas_pdf.py`, faz as oito perguntas
-obrigatórias de Factory Method: conceito, exemplo Java, quando usar/evitar,
-uso incorreto, conceitos equivocados, duas perguntas de anti-alucinação e
-fechamento. Ele chama o fluxo real do projeto e registra as respostas completas.
-
-## Preparação
-
-Abra um terminal na raiz do projeto e ative seu ambiente virtual. Se estiver
-usando o ambiente `.venvcle` existente, no Linux:
+## Sem o modelo real (rápido)
 
 ```bash
-source .venvcle/bin/activate
+python -m unittest -v tests.test_unitarios
 ```
 
-Se ainda precisar instalar as dependências, com o ambiente ativado:
+39 testes que usam um Ollama simulado (`ollama_simulado.py`): ele devolve respostas
+roteirizadas por agente e registra cada requisição. Cobrem roteamento e barreiras
+anti-alucinação, recusas, guardrails, veredito do Guardião e reescrita opcional, parâmetros enviados ao
+Ollama (num_ctx, temperatura), falhas do Ollama, memória, prompts (seções do Anexo B), CLI e os
+exemplos Java (compilados e executados quando há `javac`). A memória dos testes vai para uma
+pasta temporária: as suas sessões não são tocadas.
+
+Esses testes **não** avaliam a qualidade das respostas do modelo.
+
+## Com o modelo real (roteiro da avaliação)
+
+Com o Ollama aberto e o `qwen2.5:3b` baixado:
 
 ```bash
-python -m pip install -r requirements.txt
+python tests/test_perguntas_pdf.py            # 8 perguntas do roteiro
+python tests/test_perguntas_pdf.py --extras   # + 6 casos-limite
 ```
 
-Inicie o Ollama em outro terminal:
-
-```bash
-ollama serve
-```
-
-Verifique se o modelo está disponível:
-
-```bash
-ollama list
-```
-
-Caso não esteja, baixe-o antes de executar a coleta:
-
-```bash
-ollama pull qwen2.5:3b
-```
-
-O script usa o modelo configurado pelo projeto, por padrão `qwen2.5:3b`.
-Se o Ollama já estiver ativo, não é necessário iniciar outro servidor.
-
-## Executar no futuro
-
-Na raiz do projeto, execute:
-
-```bash
-python tests/test_perguntas_pdf.py
-```
-
-As perguntas são feitas em sequência. Cada uma usa uma sessão nova para evitar
-interferência de conversas antigas ou de um exercício pendente. As sessões
-geradas ficam em `memoria/sessoes/`, ignoradas pelo Git.
-
-As recusas dos dois pedidos de anti-alucinação são capturadas como respostas
-do sistema; essas recusas podem ocorrer antes da chamada ao modelo.
-
-## Resultado
-
-O arquivo será salvo em:
-
-```text
-evidencias/respostas_teste.json
-```
-
-Ele contém as perguntas, categorias, respostas sem truncamento, identificadores
-de sessão, duração e eventuais erros. O campo `modelo` identifica o modelo
-configurado quando o sistema carrega corretamente. Datas são registradas em UTC.
-
-Cada execução substitui esse JSON. Copie o arquivo antes de repetir se quiser
-preservar uma coleta anterior. O script salva o progresso após cada pergunta;
-se uma falhar, registra o erro e continua. Ctrl+C preserva o que já foi coletado
-e identifica as perguntas não executadas.
-
-Os estados por pergunta são `nao_executada`, `em_execucao`, `respondida`,
-`recusa`, `erro` e `interrompida`. Código de saída 0 indica coleta concluída;
-1 indica erro; 130 indica interrupção. Concluir a coleta não significa que as
-respostas estejam conceitualmente corretas: o julgamento deve ser feito depois.
-
-
+Cada pergunta usa uma sessão nova. O resultado vai para `evidencias/respostas_teste.json`
+(substituído a cada execução; copie antes se quiser guardar), com resposta integral,
+intenção, agentes, veredito do Guardião, duração e um campo `julgamento` para a dupla
+preencher. Os estados são `respondida` (modelo), `recusa` (resposta determinística),
+`erro` e `interrompida`. Código de saída 0 indica coleta concluída, 1 erro, 130 interrupção.

@@ -1,0 +1,18 @@
+Estrutura (UML simplificada):
+
+   +-------------------------------+            +---------------------+
+   |            Creator            |  depende   |     <<interface>>   |
+   |-------------------------------|----------->|       Product       |
+   | + operacao()                  |            +---------------------+
+   | # factoryMethod(): Product    |                       ^
+   +-------------------------------+                       | implementa
+                  ^                                        |
+                  | herda                       +---------------------+
+   +-------------------------------+   cria     |   ConcreteProduct   |
+   |        ConcreteCreator        |- - - - - ->|                     |
+   |-------------------------------|            +---------------------+
+   | # factoryMethod(): Product    |
+   +-------------------------------+
+
+operacao() chama factoryMethod() e usa o resultado só pelo contrato Product.
+ConcreteCreator sobrescreve factoryMethod() e devolve um ConcreteProduct.

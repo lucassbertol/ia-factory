@@ -1,13 +1,17 @@
-"""Classificacao heuristica da intencao da pergunta do estudante.
+"""Roteador de intenções (determinístico) e barreiras anti-alucinação.
 
-Usada pelo fluxo para decidir quais agentes participam. A classificacao
-completa e refinada pode ser feita pelo proprio modelo local nas versoes
-futuras; aqui mantemos simples e determinístico.
+Escolhemos regras em vez de pedir ao modelo de 3B que classifique a pergunta:
+são instantâneas, previsíveis e testáveis (tests/test_unitarios.py). O custo é a
+rigidez diante de formulações muito livres.
 
-Recusas tem prioridade. Tentativas identificaveis usam a pratica pendente.
-Pedidos explicitos de atividade, selecao, comparacao, uso incorreto e exemplo
-sao classificados pelo objetivo, antes de considerar continuacoes ambiguas.
-Exercicio pendente, sozinho, nunca justifica avaliacao de uma mensagem.
+Ordem de decisão:
+  1. Barreiras (detectar_barreira): saudação, invenção de padrão, padrão
+     inexistente, outro padrão do GoF e solução pronta. Respondidas sem o modelo.
+  2. Encerramento e tentativas identificáveis do exercício em andamento.
+  3. Pedidos explícitos: exercício, uso incorreto, comparação, seleção.
+  4. Continuações curtas ("sim", "e por quê?") usando o estado da sessão.
+  5. Exemplo, diagnóstico, fechamento, conceito.
+  6. Sem vocabulário do domínio: fora de escopo.
 """
 
 from __future__ import annotations
@@ -25,6 +29,13 @@ def _normaliza(texto: str) -> str:
     return "".join(c for c in texto if unicodedata.category(c) != "Mn")
 
 
+# Intencoes respondidas sem chamar o modelo (texto deterministico).
+INTENCOES_SEM_MODELO = {
+    "saudacao", "inventicao", "padrao_desconhecido", "outro_padrao",
+    "solucao_pronta", "fora_de_escopo",
+}
+
+
 @dataclass
 class Intencao:
     """Classificacao da intencao da pergunta do estudante."""
@@ -33,6 +44,149 @@ class Intencao:
     confianca: float
     detalhe: str = ""
     usar_contexto: bool = False
+
+
+_SAUDACOES = {
+    "oi", "ola", "oie", "opa", "bom dia", "boa tarde", "boa noite", "e ai", "eai",
+    "hello", "hi", "hey", "tudo bem", "oi tudo bem", "ola tudo bem", "salve",
+    "ajuda", "help", "menu", "comandos", "o que voce faz", "o que voce sabe fazer",
+    "quem e voce", "como voce funciona", "como funciona isso", "como usar",
+    "o que posso perguntar", "comecar", "vamos comecar", "inicio",
+}
+
+_INVENCAO = re.compile(
+    r"\b(?:invent\w*|imagin\w*|finj\w*|faca de conta|elabor\w*|bol\w*|"
+    r"cri(?:e|ar|a|ou))\s+(?:para mim\s+|pra mim\s+)?(?:um|uma|o|seu|meu|novo)?\s*"
+    r"(?:novo\s+)?padr(?:ao|oes)\b"
+    r"|\bpadr(?:ao|oes)\s+(?:ficticio|imaginario|inexistente|inventado|que nao existe)"
+    r"|\binvent\w*\b.*\bpadr(?:ao|oes)\b"
+)
+
+_SOLUCAO_PRONTA = re.compile(
+    r"\bcodigo\s+(?:pronto|completo|inteiro|final)\b"
+    r"|\b(?:solucao|resolucao|implementacao)\s+(?:pronta|completa|inteira|final)\b"
+    r"|\b(?:faca|faz|fazer|termine|termina|complete)\s+(?:o |a )?(?:meu|minha)\s+"
+    r"(?:trabalho|tarefa|lista|atividade|exercicio|projeto)\b"
+    r"|\b(?:resolva|resolve|resolver)\s+(?:o|a|meu|minha|esse|essa|este|esta)\s+"
+    r"(?:trabalho|tarefa|lista|atividade|exercicio|projeto)\b"
+    r"|\b(?:resolva|resolve|faca|faz)\s+(?:isso\s+|tudo\s+)?(?:pra|para) mim\b"
+    r"|\b(?:pra|para) eu (?:entregar|copiar|colar)\b"
+    r"|\bcopi(?:e|ar) e col(?:e|ar)\b|\bctrl\s*\+?\s*[cv]\b"
+    r"|\b(?:sistema|projeto|programa|aplicacao|app)\s+(?:completo|completa|inteiro|inteira)\b"
+    r"|\b(?:me )?entreg\w* (?:o |a )?(?:codigo|resposta|solucao)\b"
+    r"|\bgabarito\b"
+)
+
+_PEDE_RESPOSTA_EXERCICIO = re.compile(
+    r"\b(?:me )?(?:de|da|diga|diz|fala|fale|passa|passe|mostre|mostra)\s+"
+    r"(?:logo\s+)?a\s+resposta\b|\bqual (?:e )?a resposta\b"
+)
+
+_PREENCHIMENTO_APOS_PADRAO = {
+    "chamado", "chamada", "denominado", "denominada", "conhecido", "conhecida",
+    "como", "gof", "criacional",
+}
+
+
+def _sem_acento(texto: str) -> str:
+    texto = unicodedata.normalize("NFD", texto)
+    return "".join(c for c in texto if unicodedata.category(c) != "Mn")
+
+
+def extrair_nomes_de_padrao(pergunta: str) -> list[tuple[str, str]]:
+    """Encontra nomes citados como "padrão X" ou "X pattern".
+
+    Devolve pares (nome normalizado, nome como foi escrito). Só considera um
+    nome desconhecido quando ele foi escrito com inicial maiúscula (nome
+    próprio) ou é uma letra isolada, para não confundir "o padrão resolve"
+    com um padrão chamado "resolve".
+    """
+    from .catalogo import NAO_SAO_NOMES, classificar_nome
+
+    tokens = re.findall(r"[A-Za-z0-9][A-Za-z0-9\-]*", _sem_acento(pergunta))
+    encontrados: list[tuple[str, str]] = []
+    for i, token in enumerate(tokens):
+        if token.lower() not in {"padrao", "pattern"}:
+            continue
+        j = i + 1
+        while j < len(tokens):
+            atual = tokens[j].lower()
+            if atual in _PREENCHIMENTO_APOS_PADRAO:
+                j += 1
+            elif atual == "de" and j + 1 < len(tokens) and tokens[j + 1].lower() in {"projeto", "projetos", "nome"}:
+                j += 2
+            else:
+                break
+        nome: list[str] = []
+        while j < len(tokens) and len(nome) < 3 and tokens[j].lower() not in NAO_SAO_NOMES:
+            nome.append(tokens[j])
+            j += 1
+        if not nome:
+            continue
+        normalizado = " ".join(t.lower() for t in nome)
+        tipo = classificar_nome(normalizado)
+        if tipo == "desconhecido":
+            # Reduz ao maior prefixo conhecido ("factory method em" -> conhecido).
+            for k in range(len(nome) - 1, 0, -1):
+                if classificar_nome(" ".join(t.lower() for t in nome[:k])) != "desconhecido":
+                    tipo = "conhecido"
+                    break
+        proprio = nome[0][0].isupper() or (len(nome[0]) == 1 and nome[0].isalpha())
+        if tipo == "desconhecido" and not proprio:
+            continue
+        encontrados.append((normalizado, " ".join(nome)))
+    return encontrados
+
+
+def detectar_barreira(pergunta: str, *, exercicio_pendente: bool = False) -> Intencao | None:
+    """Pedidos que o sistema responde sem chamar o modelo (ou None)."""
+    from .catalogo import classificar_nome
+
+    p = " ".join(_normaliza(pergunta).split())
+    curta = re.sub(r"[^\w\s]", "", p).strip()
+
+    if curta in _SAUDACOES or (
+        len(curta.split()) <= 4
+        and re.match(r"^(?:oi|ola|oie|bom dia|boa tarde|boa noite|e ai|hello|hi|hey)\b", curta)
+        and "factory" not in curta
+    ):
+        return Intencao("saudacao", 0.95, "saudação ou pedido de ajuda")
+
+    if _INVENCAO.search(p):
+        return Intencao("inventicao", 0.95, "pedido de invenção de padrão")
+
+    pedido_pronto = _SOLUCAO_PRONTA.search(p)
+    if pedido_pronto and "exemplo" in p and not re.search(
+        r"solucao|pronto|entreg|trabalho|projeto|sistema|atividade|exercicio", p
+    ):
+        pedido_pronto = None  # "codigo completo do exemplo" e pedido de exemplo
+    if pedido_pronto or (exercicio_pendente and _PEDE_RESPOSTA_EXERCICIO.search(p)):
+        return Intencao("solucao_pronta", 0.95, "pedido de solução pronta")
+
+    nomes = extrair_nomes_de_padrao(pergunta)
+    for normalizado, original in nomes:
+        if classificar_nome(normalizado) == "desconhecido":
+            return Intencao("padrao_desconhecido", 0.9, original)
+
+    menciona_fm = any(t in p for t in ("factory method", "metodo fabrica", "metodo de fabrica"))
+    for normalizado, original in nomes:
+        if classificar_nome(normalizado) == "outro" and not menciona_fm:
+            return Intencao("outro_padrao", 0.85, original)
+    return None
+
+
+def detectar_nivel(pergunta: str) -> str:
+    """Nível declarado pelo estudante na mensagem ("sou iniciante"), ou ""."""
+    p = _normaliza(pergunta)
+    padroes = {
+        "iniciante": r"\b(?:sou|estou|nivel)\s+(?:um |uma )?(?:iniciante|basico|novato|leigo)\b",
+        "intermediario": r"\b(?:sou|estou|nivel)\s+(?:um |uma )?intermediari[oa]\b",
+        "avancado": r"\b(?:sou|estou|nivel)\s+(?:um |uma )?(?:avancad[oa]|experiente)\b",
+    }
+    for nivel, expr in padroes.items():
+        if re.search(expr, p):
+            return nivel
+    return ""
 
 
 def classificar_intencao(
@@ -52,42 +206,11 @@ def classificar_intencao(
         """Verifica se alguma frase (normalizada) esta contida no texto."""
         return any(_normaliza(f) in p for f in frases)
 
-    # 1a. Invenção de padrão (anti-alucinação) — prioridade alta
-    if contem(
-        [
-            "invente um padrão",
-            "invente um padrao",
-            "inventar um padrão",
-            "inventar um padrao",
-            "padrão z",
-            "padrao z",
-            "padrão fictício",
-            "padrao ficticio",
-            "criar um padrão",
-            "criar um padrao",
-            "padrão imaginário",
-            "padrao imaginario",
-        ]
-    ):
-        return Intencao("inventicao", 0.95, "pedido de invenção de padrão")
-
-    # 1b. Pedido de solução pronta
-    if contem(
-        [
-            "código pronto",
-            "codigo pronto",
-            "solucao completa",
-            "solução completa",
-            "solucao pronta",
-            "solução pronta",
-            "entrega o código",
-            "entrega o codigo",
-            "copie e cole",
-            "me entregue o código",
-            "me entregue o codigo",
-        ]
-    ):
-        return Intencao("solucao_pronta", 0.95, "pedido de solução pronta")
+    # 1. Barreiras determinísticas: saudação, invenção, padrão inexistente,
+    #    outro padrão e solução pronta. Nenhuma delas chama o modelo.
+    barreira = detectar_barreira(pergunta, exercicio_pendente=exercicio_pendente)
+    if barreira is not None:
+        return barreira
 
     # Uma resposta a pratica nao deve ser confundida com um novo pedido de
     # exercicio so porque menciona a palavra "exercicio" ou contem codigo.
@@ -123,7 +246,9 @@ def classificar_intencao(
                "aplicado errado", "aplicado incorretamente", "ma pratica", "antipadrao"]):
         return Intencao("uso_incorreto", 0.9, "erro, consequencia e correcao", referencia_anterior)
     if contem(["diferenca", "comparacao", "compare", "comparar", "confundido", "confundida",
-               "mesmo que", "simple factory", "abstract factory"]):
+               "mesmo que", "mesma coisa", "igual ao", "igual a", "e igual", "parecido com",
+               "semelhante", "versus", " vs ", "simple factory", "abstract factory",
+               "template method"]):
         return Intencao("comparacao", 0.9, "comparacao entre padroes", referencia_anterior)
     if (re.search(r"\bquando (?:nao )?(?:usar|utilizar|aplicar|adotar|evitar)\b", p)
             or contem(["melhor escolha", "deveria ser evitado", "deveria ser evitada",
@@ -274,6 +399,8 @@ def classificar_intencao(
         "poo",
         "orientacao a objetos",
         "orientação a objetos",
+        "padrao",
+        "pattern",
     ]
 
     def tem_vocabulario_dominio() -> bool:
@@ -316,17 +443,16 @@ def decidir_agentes(intencao: Intencao, pergunta: str = "") -> list[str]:
         "diagnostico": ["inquiridor"],
         "selecao": ["tutor"],
         "comparacao": ["tutor"],
-        "uso_incorreto": ["tutor"],
+        "uso_incorreto": ["exemplificador"],
         "fechamento": ["tutor"],
-        "inventicao": [],
-        "solucao_pronta": [],
-        "fora_de_escopo": [],
     }
+    if intencao.tipo in INTENCOES_SEM_MODELO:
+        return []
     base = base_por_intencao.get(intencao.tipo, ["tutor"])
-
-    # Pedidos de recusa/anti-alucinacao nao recebem outros agentes.
-    if not base:
-        return ["guardiao"]
+    # Pedidos focados ficam com um unico agente autor: menos chamadas ao
+    # modelo local e menos chance de respostas misturadas.
+    if intencao.tipo in {"uso_incorreto", "comparacao", "selecao", "fechamento"}:
+        return base + ["guardiao"]
 
     p = _normaliza(pergunta)
 

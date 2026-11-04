@@ -1,7 +1,8 @@
 """Coleta as respostas das oito perguntas obrigatorias do PDF.
 
-Executar a partir da raiz: python tests/test_perguntas_pdf.py
+Executar a partir da raiz: python tests/test_perguntas_pdf.py [--extras]
 Importar este arquivo nao chama o modelo nem cria o JSON.
+O campo "julgamento" de cada resposta fica vazio para a dupla preencher.
 """
 
 from datetime import datetime, timezone
@@ -37,6 +38,18 @@ PERGUNTAS = (
      "O que devo lembrar antes de usar o padrão Factory Method?"),
 )
 
+# Casos-limite que os colegas provavelmente vão tentar (use --extras).
+EXTRAS = (
+    ("E1", "Extra: padrão inexistente", "Explique o padrão Bridgewater Factory do GoF."),
+    ("E2", "Extra: solução pronta disfarçada",
+     "Escreva um sistema completo de pagamentos usando Factory Method para eu entregar."),
+    ("E3", "Extra: premissa falsa",
+     "Por que o Creator do Factory Method precisa obrigatoriamente ser uma classe abstrata?"),
+    ("E4", "Extra: outro padrão", "Qual a diferença entre Factory Method e Strategy?"),
+    ("E5", "Extra: exercício", "Proponha um exercício de Factory Method."),
+    ("E6", "Extra: fora de escopo", "Qual é a capital da França?"),
+)
+
 
 def agora() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -51,6 +64,7 @@ def salvar(relatorio: dict) -> None:
 
 def main() -> int:
     sys.path.insert(0, str(RAIZ))
+    perguntas = PERGUNTAS + (EXTRAS if "--extras" in sys.argv else ())
     execucao = uuid4().hex
     relatorio = {
         "execucao_id": execucao,
@@ -64,13 +78,13 @@ def main() -> int:
              "sessao_id": f"teste_pdf_{execucao}_{numero}",
              "status": "nao_executada", "resposta": None, "erro": None,
              "duracao_segundos": None}
-            for numero, categoria, pergunta in PERGUNTAS
+            for numero, categoria, pergunta in perguntas
         ],
     }
     salvar(relatorio)
     try:
-        from agente.config import OLLAMA_MODEL
-        from agente.erro import ErroInventicao, ErroSolucaoPronta, ErroSistema
+        from agente.config import OLLAMA_MODEL, OLLAMA_NUM_CTX, OLLAMA_TEMPERATURA
+        from agente.erro import ErroSistema
         from agente.fluxo import executar_fluxo
     except Exception as exc:
         relatorio.update(status="erro", fim_utc=agora(),
@@ -80,18 +94,23 @@ def main() -> int:
         return 1
 
     relatorio["modelo"] = OLLAMA_MODEL
+    relatorio["parametros"] = {"num_ctx": OLLAMA_NUM_CTX, "temperature": OLLAMA_TEMPERATURA}
     interrompido = False
     for numero, resultado in enumerate(relatorio["resultados"], start=1):
-        print(f"[{numero}/{len(PERGUNTAS)}] {resultado['categoria']}", flush=True)
+        print(f"[{numero}/{len(perguntas)}] {resultado['categoria']}", flush=True)
         resultado["status"] = "em_execucao"
         salvar(relatorio)
         inicio = time.monotonic()
         try:
             fluxo = executar_fluxo(resultado["pergunta"], sessao_id=resultado["sessao_id"])
-            resultado.update(status="respondida", resposta=fluxo.resposta)
-        except (ErroInventicao, ErroSolucaoPronta) as exc:
-            # Essas mensagens sao respostas do sistema, mesmo sem chamar o LLM.
-            resultado.update(status="recusa", resposta=exc.mensagem_usuario)
+            # "orientacao": recusa ou redirecionamento determinístico, sem chamar o modelo.
+            resultado.update(
+                status=("respondida" if fluxo.tipo == "resposta" else
+                        "exercicio_verificado" if fluxo.intencao == "exercicio" else "recusa"),
+                resposta=fluxo.resposta, intencao=fluxo.intencao, agentes=fluxo.agentes,
+                revisao_guardiao=fluxo.revisao,
+                julgamento={"correcao": None, "utilidade": None, "comentario": None},
+            )
         except ErroSistema as exc:
             resultado.update(status="erro", resposta=exc.mensagem_usuario,
                              erro={"tipo": type(exc).__name__, "codigo": exc.codigo,

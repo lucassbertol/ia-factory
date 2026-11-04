@@ -1,181 +1,49 @@
-# Mini-relatório do Processo de Construção
+# Mini-relatório do processo de construção
 
-Projeto final ELC1070 — Analise e Projeto de Sistemas OO (UFSM)
-Sistema Multiagente Pedagogico para o padrao Factory Method
+Versão em Markdown da seção 4 do relatório de entrega.
 
----
+## 4.1. Iterações e testes
 
-## 1. Introducao
+| Iteração | Alteração ou objetivo | Teste/evidência e resultado |
+|---|---|---|
+| 1 | Estrutura inicial (até 28/10): quatro agentes do Anexo A, todos executados em sequência, prompts em .txt. | As primeiras execuções mostraram que a pergunta do estudante não chegava às tarefas: quase tudo virava explicação do Tutor. Passamos a injetar pergunta, contexto e intenção em todas as tarefas (teste de roteamento). |
+| 2 | Memória em JSON por sessão, exercício em andamento e CLI com --sessao. | Testes da CLI: comando único, entrada vazia, recusas, modelo indisponível e sessão inválida, sem traceback. |
+| 3 | Roteiro completo com o modelo (28/10, evidencias/testes_etapa7). | Respostas com erros: o cenário 05 respondeu com um exercício em C#; o E5 descreveu errado o Simple Factory; o exemplo tinha várias classes public em um arquivo. |
+| 4 | Roteamento refinado (03/11): intenções de seleção, comparação, uso incorreto e esclarecimento; contexto só quando necessário; interface web. | Execução completa de 03/11 (evidencias/execucoes): o Java gerado no cenário 02 não compilou com javac; UML ilegível no cenário 01; o cenário 05 disse 'confundido com o Factory Method'. |
+| 5 | Revisão de engenharia (03/11): LLM próprio com num_ctx e temperatura; exemplos verificados; Guardião verificador; guardrails; barreiras anti-alucinação; requirements para Windows e Linux. | 27 testes automáticos com Ollama simulado passando; requisições conferidas (num_ctx 8192, temperatura 0.2); os quatro exemplos Java compilados e executados. |
+| 6 | Primeira coleta com o modelo real após a revisão (04/11): tests/test_perguntas_pdf.py --extras, 14 perguntas. | As 6 recusas foram corretas; média de 19 s por resposta. Mas o Guardião reprovou as 8 respostas com problemas inventados, e as reescritas copiaram falsidades ('o Factory Method não é GoF'); o E3 aceitou a premissa falsa; o E4 entrou em laço de frases; apareceram ecos da pergunta e frases cortadas. |
+| 7 | Correções a partir da coleta: problema do Guardião só vale com trecho citado; reescrita só substitui se não piorar; detecção de premissa falsa na pergunta; remoção de laços, frases cortadas e texto de bastidor; repeat_penalty 1.15. | Segunda coleta (04/11): nenhuma falsidade grave nas respostas finais; E3 passou a corrigir a premissa falsa; E4 sem laço; 14 de 20 problemas do Guardião descartados por não citarem trecho real; tempo médio caiu de 19 s para 12 s. |
+| 8 | Ajustes finos da segunda coleta: problema do Guardião precisa também explicar o erro (não basta citar) e não pode copiar o exemplo do prompt; remoção de frases que comentam a própria resposta; fechamento sem copiar a referência. | Terceira coleta (04/11): recusas corretas; mas as 6 reescritas pedidas pelo Guardião não corrigiram nenhum erro real e 4 pioraram a resposta ('Desculpe pela confusão anterior', uma resposta de 46 s); média de 17 s. |
+| 9 | Decisão a partir das três coletas: reescrita pedida pelo Guardião desligada por padrão (veredito apenas registrado); remoção mecânica de frases com erro factual conhecido; mais padrões de texto de bastidor removidos. | Quarta coleta (04/11): nenhuma resposta piorada; tempo médio de 10 s; quase nenhum texto de bastidor. Restaram erros de conteúdo quando o modelo cria algo novo: no exercício (E5) trocou PDF com CSV e entregou a solução; no exemplo (02) disse que Email e Sms criam objetos; no uso incorreto (04) localizou o erro na classe errada; na comparação (E4) disse que Strategy usa sobrescrita. |
+| 10 | Banco de exercícios verificados (enunciado + gabarito) e avaliação das tentativas pelo Inquiridor contra o gabarito, sem revelá-lo; fatos verificados de cada exemplo entregues ao Exemplificador; intenções de Strategy e State corrigidas (composição); novas regras para os erros da quarta coleta. | 39 testes automáticos, 10 com saídas reais das coletas. [Quinta coleta e julgamento da dupla — completar]. |
 
-Este relatorio registra o processo real de desenvolvimento do sistema multiagente
-que ensina o padrao Factory Method. Iteracoes, testes e dificuldades correspondem
-ao que efetivamente ocorreu, etapa por etapa.
+## 4.2. Dificuldades identificadas e soluções
 
-Tecnologias: Python 3.12.3, CrewAI 1.15.32, Ollama local com qwen2.5:3b e CLI.
-Ambiente: Linux, 8 GB de RAM, sem API paga, nuvem ou chave de API.
+| Dificuldade | Como foi identificada | Solução adotada / situação final |
+|---|---|---|
+| Modelo local lento | Tempo de cada pergunta com os quatro agentes em sequência. | Um autor por turno mais o Guardião (veredito curto), num_predict 800, repeat_penalty 1.15 e recusas sem modelo. Primeira coleta de 04/11: 19 s por resposta; segunda, depois dos ajustes: 12 s. |
+| Agente fora do papel | Comparação respondida com exercício; o Guardião substituía o exemplo por uma explicação genérica. | Contratos por intenção na descrição da tarefa; o Guardião passou a dar veredito em vez de reescrever. |
+| Erros conceituais e código errado do modelo de 3B | Leitura das evidências e compilação do Java gerado com javac. | Exemplos Java verificados, guardrails com os erros observados, referência local revisada e janela de contexto de 8192 tokens. |
+| Guardião inventando problemas | Coleta real de 04/11: 8 de 8 respostas reprovadas sem motivo real; a reescrita piorava o texto. | Exigência de trecho citado e explicação; depois de três coletas sem nenhuma reescrita útil, a reescrita foi desligada por padrão e o veredito passou a ser só registrado. |
+| Prompt cortado em silêncio | Investigação do CrewAI 1.15: o endpoint compatível com a OpenAI não envia num_ctx. | LLM próprio (BaseLLM) chamando /api/chat com num_ctx, temperatura e limite de tokens. |
+| Instalação no Windows | O .venv do Windows estava incompleto (sem crewai): o requirements gerado no Linux trazia uvloop, que não existe para Windows. | requirements.txt gerado com marcadores por sistema (uv pip compile --universal) e conferido para Windows e Linux. |
+| Telemetria e pergunta de 'traces' do CrewAI | Leitura do código do framework: ele tenta enviar dados e, na primeira execução, faz uma pergunta no terminal. | Variáveis de ambiente definidas antes do import e recusa registrada nas preferências locais. |
+| Instalação do Ollama sem sudo (Linux) | O script oficial exigia sudo. | Binário oficial extraído em ~/.local/bin. |
 
----
+## 4.3. Transparência do uso de IA no desenvolvimento
 
-## 2. Iteracoes realizadas
+Ferramentas de IA usadas pela dupla durante o desenvolvimento: [completar: quais assistentes ou agentes de código foram usados nas etapas iniciais (estrutura, prompts, código, documentação), para quê e como os resultados foram verificados].
 
-O trabalho foi organizado em 13 etapas sequenciais. A seguir, as iteracoes
-efetivamente executadas:
+Em 03/11/2026 usamos o **Claude (Anthropic)** em uma sessão de agente com acesso à pasta do projeto para: revisar o sistema contra a especificação; investigar o CrewAI (descoberta da janela de contexto e da telemetria); implementar o LLM próprio, os guardrails, as barreiras anti-alucinação e os exemplos verificados; reescrever os prompts; criar os testes automáticos, o simulador do Ollama e o script do caderno de evidências; e redigir uma primeira versão das seções 3 e 4 deste relatório.
 
-| Etapa | Objetivo | Status |
-|-------|----------|--------|
-| 1 | Preparação do ambiente e validação das tecnologias | Concluída e verificada |
-| 2 | Arquitetura e estrutura do projeto | Concluída e verificada |
-| 3 | Implementação dos agentes e de seus prompts | Concluída e verificada |
-| 4 | Coordenação multiagente e fluxo pedagógico | Concluída e verificada |
-| 5 | Memória da conversa e interação contínua | Concluída e verificada |
-| 6 | Interface CLI obrigatória | Concluída e verificada |
-| 7 | Testes funcionais e pedagógicos | Concluída e verificada |
-| 8 | Documentação completa dos agentes | Concluída e verificada |
-| 9 | Justificativa das decisões de design | Concluída e verificada |
-| 10 | Mini-relatório do processo (este documento) | Em execução |
+Verificação: lemos e discutimos cada mudança de código, rodamos os testes automáticos e o roteiro com o modelo real, compilamos os exemplos Java e revisamos e reescrevemos o texto deste relatório com as nossas palavras. [completar: o que a dupla alterou ou rejeitou do que foi sugerido].
 
-Cada etapa só foi iniciada após a conclusão e validação da anterior, respeitando a
-regra de execução sequencial.
+O modelo incorporado ao tutor (qwen2.5:3b, local) é diferente das ferramentas de IA usadas para construir o projeto.
 
----
+## 4.4. Modelo local e condições de execução
 
-## 3. Dificuldades encontradas
-
-### 3.1. Instalação do Ollama sem privilégios de sudo
-
-O ambiente não oferece acesso `sudo` sem senha, o que impediu a execução direta do
-script oficial de instalação do Ollama.
-
-**Solução adotada:** Baixei o tarball oficial (`ollama-linux-amd64.tar.zst`), extrai
-o binário para `~/.local/bin/ollama` e iniciei o servidor em segundo plano com
-`nohup ollama serve` em `http://127.0.0.1:11434`. O modelo qwen2.5:3b foi baixado
-com sucesso (1,9 GB).
-
-### 3.2. Classes de exceção que não herdam de Exception
-
-Na implementação inicial de `agente/erro.py`, as classes de erro (`ErroEntradaVazia`,
-`ErroInventicao`, `ErroSolucaoPronta`, etc.) eram definidas com `@dataclass` e não
-herdavam de `Exception`. Isso causava `TypeError` ao capturá-las com `except`.
-
-**Solução adotada:** Reescrevi `agente/erro.py` para que `ErroSistema` herde de
-`Exception` e todas as subclasses derivem de `ErroSistema`. Após a correção, os
-tratamentos de erro (entrada vazia, invenção de padrão, solução pronta, fora de
-escopo, falha do Ollama, saída inesperada) passaram a funcionar corretamente,
-retornando mensagens amigáveis ao estudante sem expor tracebacks do Python.
-
-### 3.3. Classificação de intenção não detectava acentos
-
-A função `classificar_intencao` normalizava o texto da pergunta (removendo
-acentos), mas comparava com frases de busca que ainda continham acento. Como
-resultado, "Invente um padrão chamado Z" não era classificado como invenção de
-padrão, e o Guardiao gerava uma resposta sobre o Factory Method em vez de recusar
-educadamente.
-
-**Solução adotada:** Adicionei a função auxiliar `_normaliza()` e passei também as
-frases de busca por essa normalização antes da comparação. Após a correção, a
-classificação passou a detectar corretamente invenção de padrão, solução pronta,
-conceito, exemplo, diagnóstico e fechamento, independentemente do uso de acento.
-
-### 3.4. Modelo local pequeno (qwen2.5:3b) e limitações de qualidade
-
-O modelo qwen2.5:3b (3B de parâmetros) foi escolhido por se adequar a máquinas com
-8 GB de RAM, conforme sugerido na especificação. No entanto, testes funcionais
-(Etapa 7) revelaram algumas imprecisões:
-- Simplificação excessiva de conceitos (teste 01 - Conceitual).
-- Risco de confundir Factory Method com Abstract Factory ou Simple Factory
-  (testes 02, 05, E5).
-- Não correção consistente de premissas falsas (teste E4).
-
-**Solução adotada:** Não há substituição do modelo por um maior, pois isso violaria
-a restrição de hardware (8 GB de RAM). Em vez disso, documentei essas limitações de
-forma transparente nas evidências de teste (`evidencias/testes_etapa7/`) e as
-abordo na justificativa de design (Etapa 9) como trade-off do modelo local pequeno.
-
-### 3.5. Roteamento de agentes ignorava a pergunta do estudante
-
-As descrições das tarefas em `agente/crew.py` eram genéricas e não continham a
-pergunta do estudante. O `kickoff(inputs=...)` passava `pergunta` e `contexto`,
-mas as descrições não usavam esses placeholders; assim, os agentes recebiam sempre
-a mesma tarefa ("apresente o conceito"). Na prática, quase toda pergunta caía no
-Tutor, mesmo quando o estudante pedia um exercício ou um exemplo.
-
-**Solução adotada:** `montar_crew` passou a receber `pergunta`, `contexto` e
-`intencao`, injetados no texto de todas as tarefas. A classificação foi
-reordenada (exercício e exemplo antes de conceito) e `decidir_agentes` passou a
-acrescentar agentes para pedidos combinados (ex.: "explique e dê um exemplo").
-O Guardião recebeu instruções para preservar exercícios e exemplos, sem
-substituí-los por uma explicação genérica. O comportamento é coberto por
-`test_roteamento.py`.
-
----
-
-## 4. Testes feitos pela dupla
-
-Testes executados, com evidências salvas em `evidencias/testes_etapa7/`:
-
-### 4.1. Sete categorias do roteiro de avaliação (01 a 07)
-Todos com respostas reais registradas:
-1. Conceitual - "O que é o Factory Method e qual problema resolve?"
-2. Exemplo - "Exemplo de aplicação em Java"
-3. Seleção - "Quando usar e quando evitar"
-4. Uso incorreto - "Como é aplicado de forma errada?"
-5. Conceitos equivocados - "Com qual padrão é confundido?"
-6a. Anti-alucinação - "Invente um padrão chamado Z" (recusa educada)
-6b. Anti-alucinação - "Código pronto de solução completa" (recusa educada)
-7. Fechamento - "O que lembrar antes de usar?"
-
-### 4.2. Testes de erro (E1 a E5)
-- E1 - Entrada vazia: rejeitada com mensagem amigável.
-- E2 - Fora de escopo: detectado pela heurística de vocabulário do domínio.
-- E3 - Memória/contexto: 2 turnos dependentes na mesma sessão, contexto injetado.
-- E4 - Premissa falsa: testada (limitação de correção documentada).
-- E5 - Confusão de padrões: Factory Method vs Simple Factory testada.
-
-### 4.3. Testes da CLI (Etapa 6)
-7/7 aprovados: comando único, término do comando, entrada vazia, recusa a invenção,
-recusa a solução pronta, fora de escopo, erro sem traceback Python.
-
-### 4.4. Testes de memória (Etapa 5)
-3 cenários aprovados: múltiplos turnos, contexto injetado, exercício com
-continuidade e memória não tratada como fato.
-
-### 4.5. Testes de roteamento
-`test_roteamento.py` aprovado: classificação das oito intenções, seleção do
-agente correto, pedidos combinados e injeção de pergunta/contexto/intenção nas
-tarefas do CrewAI.
-
----
-
-## 5. Uso de IA no processo
-
-Foi utilizada IA generativa (assistentes de chat) para apoiar o desenvolvimento,
-conforme permitido pela especificação (seção 9): estruturação da arquitetura,
-redação de prompts, trechos de código Python e documentos. Todas as decisões,
-prompts e trechos foram revisados, compreendidos e adaptados pela dupla. Nada foi
-copiado sem compreensão; o código e os documentos refletem o que foi implementado
-e testado.
-
----
-
-## 6. Modelo local e configuração de hardware
-
-- **Modelo de linguagem:** qwen2.5:3b (quantizado, aberto), executado localmente
-  via Ollama (servidor versão 0.40.12) na porta 127.0.0.1:11434.
-- **Framework multiagente:** CrewAI 1.15.32.
-- **Linguagem:** Python 3.12.3, em ambiente virtual (`.venv/`).
-- **Sistema operacional:** Linux (ambiente principal).
-- **Configuração da máquina:** 8 GB de RAM (conforme o cenário sugerido na
-  especificação para o modelo qwen2.5:3b).
-- **Custo zero:** Não há dependência de API paga, chave de API, serviço de nuvem
-  ou qualquer mecanismo que gere custo financeiro por uso. A internet foi usada
-  apenas para baixar bibliotecas e o modelo.
-
----
-
-## 7. Conclusão
-
-O processo seguiu uma abordagem etapa por etapa, com validação antes de avançar.
-As dificuldades (instalação do Ollama sem sudo, classes de exceção, normalização
-de acentos, limitações do modelo pequeno e roteamento de agentes) foram resolvidas
-ou documentadas. O sistema atende aos requisitos: múltiplos agentes, memória,
-lógica pedagógica, anti-alucinação, CLI padronizada, custo zero e modelo local.
+- **Modelo:** qwen2.5:3b (tag do Ollama), modelo aberto quantizado, executado localmente; nenhuma chave, nuvem ou serviço pago.
+- **Servidor:** Ollama [versão — completar com `ollama --version`] em http://127.0.0.1:11434; o código usa só a API local `/api/chat`.
+- **Parâmetros por chamada:** num_ctx 8192, temperature 0.2, num_predict 800, repeat_penalty 1.15, timeout de 180 s (ajustáveis por variáveis de ambiente em `agente/config.py`).
+- **Máquina da demonstração:** Windows [versão — completar], [CPU — completar], 16 GB de RAM, [GPU — completar ou 'sem GPU'], Python 3.12.10.
+- **Limitações observadas (coletas de 04/11):** média de 10 s por resposta na quarta coleta (de 4 a 26 s); o modelo de 3B tende a repetir frases, ecoar a pergunta e, como revisor, apontar problemas que não existem. Os filtros determinísticos contêm esses efeitos, mas não os eliminam.

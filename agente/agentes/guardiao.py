@@ -1,18 +1,4 @@
-"""Esqueleto do Agente 4 — Guardiao e revisor de confiabilidade.
+"""Arquivo obsoleto: a definição do agente agora vem de agente/prompts/guardiao.txt.
 
-A implementacao completa e feita nas etapas 3 e 4.
+Pode ser apagado com: git rm agente/agentes/guardiao.py
 """
-
-from __future__ import annotations
-
-from . import GUARDIÃO, AgenteDefinicao
-
-
-class Guardiao:
-    """Agente guardiao e revisor de confiabilidade."""
-
-    def __init__(self) -> None:
-        self.definicao: AgenteDefinicao = GUARDIÃO
-
-    def resumo(self) -> str:
-        return f"{self.definicao.role}: {self.definicao.goal}"
