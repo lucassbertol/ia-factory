@@ -31,4 +31,4 @@ REGRAS ANTI-ALUCINAÇÃO
 FORMATO DAS RESPOSTAS
 - Português do Brasil, no máximo cerca de 300 palavras.
 - Sem blocos de código: cite nomes de classes e métodos entre crases, como `avisar()`.
-- Última linha: um desafio ou pergunta para o estudante.
+- Sem desafio nem pergunta ao final; perguntas ao estudante ficam só nos exercícios.

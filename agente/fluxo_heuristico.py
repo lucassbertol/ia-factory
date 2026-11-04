@@ -249,6 +249,22 @@ _VOCABULARIO_PRATICA = (
     r"seria|seriam|criaria|usaria|faria|colocaria|implement\w*|sobrescrev\w*|estend\w*|"
     r"extends|herd\w*|subclasses?|simple factory|static|estatic\w*)\b"
 )
+# Nomes do domínio dos três exercícios do banco.
+_VOCABULARIO_EXERCICIOS = (
+    r"\b(?:recibos?\w*|emissor\w*|emitir|html|pdf|pagamentos?|caixa\w*|pix|cartao|whats\w*|"
+    r"notificador\w*|fabricapagamento)\b"
+)
+# Palavras típicas de quem está respondendo (sem vocabulário técnico):
+# "Não existe", "Ela está errada", "Acho que é o Emissor".
+_PALAVRAS_DE_RESPOSTA = (
+    r"\b(?:sim|nao|acho|creio|seria|seriam|ela|ele|esta|certa|certo|errad\w*|existe|existem|"
+    r"nenhum\w*|tem|teria|classe\w*|metodo\w*|interface|novo|nova|main|codigo)\b"
+)
+_DUVIDAS_NO_EXERCICIO = {
+    "nao entendi", "como assim", "nao sei", "nao sei responder", "pode explicar melhor",
+    "explica melhor", "me ajuda", "uma dica", "me da uma dica", "me de uma dica", "dica",
+    "nao entendi a pergunta", "nao sei por onde comecar",
+}
 _PERGUNTA_DE_CONCEITO = (
     r"^(?:o que|oque|explique|explica|como funciona|qual (?:a|e a) diferenca|por que|porque|"
     r"pra que|para que|me (?:explique|explica|de um exemplo|mostre))\b"
@@ -307,17 +323,31 @@ def classificar_intencao(
             or contem(["me pergunte", "pergunta para mim", "quero praticar", "vamos praticar"])):
         return Intencao("exercicio", 0.85, "pedido de exercicio pratico")
 
-    # Durante o exercício, o estudante costuma responder sem "Minha resposta:"
-    # ("Para HTML eu criaria ReciboHtml...", "Ela usou uma Simple Factory").
-    # Teste web de 04/11: isso caía em fora de escopo ou em comparação, e a
-    # sequência do exercício se perdia. Vale como tentativa quando usa o
-    # vocabulário da prática e não é uma pergunta de conceito ou comparação.
-    contexto_de_pratica = exercicio_pendente and ultima_intencao in {"exercicio", "avaliacao", "esclarecimento"}
+    # Exercício em andamento: a mensagem é a resposta do estudante, sem precisar
+    # de "Minha resposta:". Teste web de 04/11: respostas naturais ("Ela usou uma
+    # Simple Factory", "Para HTML eu criaria ReciboHtml...") caíam em comparação
+    # ou fora de escopo e o exercício se perdia. Ficam de fora só as perguntas e
+    # os pedidos (conceito, exemplo, resumo, "não entendi"), tratados abaixo.
+    contexto_de_pratica = exercicio_pendente
+    curta = re.sub(r"[^\w\s]", "", p).strip()
     pergunta_conceito = re.match(_PERGUNTA_DE_CONCEITO, p) or re.search(
         r"\b(?:resum\w*|recapitul\w*|lembrar|fechamento|conclus\w*)\b", p) or (
         p.rstrip().endswith("?")
         and re.search(r"\b(?:diferenca|compar\w*|o que (?:e|eh|significa)|explic\w*|quando (?:usar|evitar))\b", p))
-    if contexto_de_pratica and re.search(_VOCABULARIO_PRATICA, p) and not pergunta_conceito:
+    pede_exemplo = re.search(
+        r"^(?:me |quero |queria |gostaria de |pode |poderia |mostre|mostra|de |da )[^.?!]{0,30}\bexemplos?\b"
+        r"|\b(?:exemplo|codigo) (?:em|de) java\b", p)
+    duvida = curta in _DUVIDAS_NO_EXERCICIO
+    # Pergunta geral ("Como o padrão costuma ser aplicado de forma errada?") não é
+    # resposta, a menos que fale das classes do exercício.
+    pergunta_geral = p.rstrip().endswith("?") and re.match(
+        r"(?:e )?(?:como|qual|quais|quem|quando|onde|por que|porque|o que|pra que|para que|e se)\b", p
+    ) and not re.search(_VOCABULARIO_EXERCICIOS, p)
+    if contexto_de_pratica and pergunta_geral and not pergunta_conceito and re.search(r"\b(?:products?|creators?|concret\w*|participantes?)\b", p):
+        # "Qual seria o Creator?": dúvida sobre o exercício, não pergunta solta.
+        return Intencao("esclarecimento", 0.75, "duvida sobre a atividade em andamento", usar_contexto=True)
+    if (contexto_de_pratica and not (pergunta_conceito or pede_exemplo or duvida or pergunta_geral)
+            and re.search(_VOCABULARIO_PRATICA + "|" + _PALAVRAS_DE_RESPOSTA, p)):
         return Intencao("avaliacao", 0.75, "resposta ao exercicio em andamento", usar_contexto=True)
 
     # Pedidos expositivos vem antes de palavras como "exercicio" e "exemplo":
@@ -337,8 +367,7 @@ def classificar_intencao(
 
     # Continuacoes elipticas precisam de contexto; nao basta tornar toda
     # mensagem desconhecida parte da aula (isso aceitaria assuntos alheios).
-    curta = re.sub(r"[^\w\s]", "", p).strip()
-    if contexto_de_pratica and curta == "nao entendi":
+    if contexto_de_pratica and duvida:
         return Intencao("esclarecimento", 0.8, "duvida sobre a atividade em andamento", usar_contexto=True)
     if ultima_intencao and curta in {
         "sim", "nao", "entendi", "ok", "certo", "continue", "pode continuar",
@@ -470,6 +499,9 @@ def classificar_intencao(
         "concreto",
         "abstrato",
         "criador",
+        "creator",
+        "product",
+        "concrete",
         "heranca",
         "herança",
         "polimorfismo",

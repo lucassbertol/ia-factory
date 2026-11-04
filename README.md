@@ -80,7 +80,7 @@ Exemplo de prática com memória:
 
 ```bash
 python -m agente --sessao ana "Proponha um exercício de Factory Method"
-python -m agente --sessao ana "Minha resposta: Recibo seria o Product e ReciboPdf um ConcreteProduct"
+python -m agente --sessao ana "Recibo seria o Product e ReciboPdf um ConcreteProduct"
 python -m agente --sessao ana "Encerrar exercício"
 ```
 

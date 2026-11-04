@@ -78,7 +78,8 @@ class MemoriaConversa:
             "exercicio_pendente": (
                 self.exercicio_pendente if extras.get("revisao", {}).get("bloqueada") else
                 resposta if intencao == "exercicio" else
-                "" if intencao == "fechamento" else self.exercicio_pendente
+                "" if intencao == "fechamento" or extras.get("exercicio_concluido") else
+                self.exercicio_pendente
             ),
         }
         turno.update({k: v for k, v in extras.items() if v not in (None, "", [])})

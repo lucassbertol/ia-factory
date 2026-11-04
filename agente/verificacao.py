@@ -100,6 +100,8 @@ class Exigencias:
     respostas_anteriores: list[str] = field(default_factory=list)
     # A avaliação verificada não achou equívoco: o texto não pode apontar erros.
     sem_equivocos: bool = False
+    # Fora dos exercícios a resposta não termina com pergunta ao estudante.
+    sem_pergunta_final: bool = False
 
 
 # Termos que o Inquiridor pode atribuir ao estudante sem que ele os tenha usado.
@@ -471,7 +473,8 @@ def corrigir_mecanicamente(texto: str, exigencias: Exigencias) -> str:
         texto = "\n".join(re.sub(r"[ \t]{2,}", " ", linha).rstrip() for linha in texto.splitlines())
     texto = remover_introducoes_penduradas(remover_titulos_vazios(remover_repeticoes(texto)))
     texto = remover_titulos_vazios(texto)
-    return cortar_frase_incompleta(limitar_tamanho(texto, exigencias.max_caracteres))
+    texto = cortar_frase_incompleta(limitar_tamanho(texto, exigencias.max_caracteres))
+    return remover_pergunta_final(texto) if exigencias.sem_pergunta_final else texto
 
 
 def premissas_falsas(pergunta: str) -> list[str]:
@@ -562,6 +565,22 @@ def avaliar_revisao(texto: str, textos: dict[str, str], pergunta: str, referenci
     return {"veredito": "INCONCLUSIVO" if descartados else "REPROVADO",
             "problemas": aceitos, "problemas_descartados": descartados,
             "motivo": "Crítica sem evidência verificável." if descartados else ""}
+
+
+def remover_pergunta_final(texto: str) -> str:
+    """Tira as perguntas ao estudante do fim do texto ("Quer ver um exemplo?",
+    "Como isso poderia ser aplicado usando o Factory Method?") e o que só as
+    anunciava ("Que tal tentar:", "Pergunta para reflexão:")."""
+    partes = re.split(r"(?<=[.!?:])(\s+)", texto.rstrip())
+    frases, seps = partes[0::2], partes[1::2]
+    while frases and re.sub(r"[*_\s]+$", "", frases[-1]).endswith(("?", ":")):
+        frases.pop()
+        if seps:
+            seps.pop()
+    if not frases or len("".join(frases).strip()) < 20:
+        return texto.rstrip()
+    resultado = frases[0] + "".join(sep + frase for sep, frase in zip(seps, frases[1:]))
+    return remover_titulos_vazios(resultado.rstrip())
 
 
 def garantir_pergunta_final(texto: str, pergunta_padrao: str) -> str:

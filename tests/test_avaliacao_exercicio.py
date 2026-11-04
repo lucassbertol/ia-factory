@@ -325,6 +325,47 @@ class OutrosExerciciosTest(unittest.TestCase):
         self.assertTrue(resultado.resposta.endswith("Que nome tem essa forma de criar objetos?"))
 
 
+class SemPrefixoTest(unittest.TestCase):
+    def test_tres_exercicios_sem_minha_resposta(self):
+        # Pedido do usuário (04/11): responder sem "Minha resposta:".
+        roteiro = [
+            ("me de um exercício", "Product?"),
+            ("o product seria o recibo", "os tipos concretos de recibo?"),
+            ("ReciboPdf e ReciboTexto são os concrete products", "Qual classe seria o Creator"),
+            ("o creator é o Emissor e os concrete creators são EmissorPdf e EmissorTexto", "HTML"),
+            ("Eu criaria ReciboHtml e EmissorHtml, sem mexer em emitir()", "outro exercício"),
+            ("me de outro exercício", "existe alguma subclasse"),
+            ("Não existe", "ela está certa"),
+            ("Não, é uma Simple Factory", "Como você transformaria"),
+            ("Eu criaria uma classe Caixa e subclasses CaixaPix e CaixaCartao que sobrescrevem "
+             "criarPagamento()", "outro exercício"),
+            ("me de outro exercício", "produto WhatsApp"),
+            ("Uma classe Whatsapp que implementa Notificacao", "qual classe nova cria"),
+            ("NotificadorWhatsapp estende Notificador", "precisariam mudar"),
+            ("Nenhuma, só o main muda", "outro exercício"),
+        ]
+        with TemporaryDirectory() as pasta, patch("agente.memoria.MEMORIA_DIR", Path(pasta)), \
+                patch.dict("os.environ", {"CREWAI_STORAGE_DIR": str(Path(pasta) / "crewai")}), \
+                patch("agente.fluxo._executar", return_value=saida("Muito bem.", "texto solto")):
+            for pergunta, esperado in roteiro:
+                with self.subTest(pergunta=pergunta):
+                    self.assertIn(esperado, fluxo.executar_fluxo(pergunta, "s").resposta)
+
+
+class ExercicioConcluidoTest(unittest.TestCase):
+    def test_exercicio_concluido_encerra_a_pratica(self):
+        with TemporaryDirectory() as pasta, patch("agente.memoria.MEMORIA_DIR", Path(pasta)), \
+                patch.dict("os.environ", {"CREWAI_STORAGE_DIR": str(Path(pasta) / "crewai")}):
+            fluxo.executar_fluxo("Me de um exercício de factory method.", "s")
+            tudo = ("Product: Recibo. ConcreteProducts: ReciboPdf e ReciboTexto. Creator: Emissor. "
+                    "ConcreteCreators: EmissorPdf e EmissorTexto. Para HTML eu criaria ReciboHtml e "
+                    "EmissorHtml sem mudar emitir().")
+            with patch("agente.fluxo._executar", return_value=saida("Muito bem, tudo certo.", "texto solto")):
+                fim = fluxo.executar_fluxo(tudo, "s")
+            self.assertTrue(fim.resposta.endswith("revisar algum ponto do Factory Method?"))
+            self.assertEqual(MemoriaConversa("s").exercicio_pendente, "")
+
+
 class NomesReservadosTest(unittest.TestCase):
     def setUp(self):
         self.exercicio = exercicio_por_id("recibos")

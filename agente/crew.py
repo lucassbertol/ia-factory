@@ -75,6 +75,9 @@ def pergunta_final_padrao(intencao: str) -> str:
 
 # Intenções em que o texto avalia uma tentativa do exercício em andamento.
 INTENCOES_AVALIACAO = {"avaliacao", "esclarecimento"}
+# Só os exercícios terminam com pergunta ao estudante (pedido do usuário, 04/11:
+# "parar de fazer essas perguntas ao final das respostas, exceto dos exercícios").
+INTENCOES_COM_PERGUNTA = {"exercicio", "avaliacao", "esclarecimento"}
 
 
 @dataclass
@@ -165,8 +168,8 @@ def _contrato(plano: PlanoTurno, autor: str) -> str:
             "Explique esse código em no máximo 250 palavras: o papel de cada classe no padrão, "
             "o que acontece quando o main executa e por que isso é Factory Method. Se o "
             "estudante citou um domínio próprio, mostre em palavras como cada classe "
-            "corresponderia a ele. Não reescreva o código e não responda o desafio final: "
-            "apenas proponha-o."
+            "corresponderia a ele. Não reescreva o código e não termine com desafio nem "
+            "pergunta ao estudante."
         )
     if i == "uso_incorreto":
         return (
@@ -210,7 +213,7 @@ def _contrato(plano: PlanoTurno, autor: str) -> str:
     if i == "diagnostico":
         return (
             "Identifique a dúvida ou o equívoco do estudante e esclareça-o diretamente, com base "
-            "na referência. Termine com uma única pergunta guia."
+            "na referência. Não termine com pergunta."
         )
     if i == "fechamento":
         topicos = (
@@ -222,13 +225,13 @@ def _contrato(plano: PlanoTurno, autor: str) -> str:
             "estudante deve lembrar antes de usar o Factory Method (incluindo um sinal de que o "
             "padrão seria exagero). Escreva com suas palavras: não copie a referência, não "
             "mencione a referência, os agentes nem os arquivos de exemplo, e não introduza "
-            "conteúdo novo. Termine com uma pergunta dirigida ao estudante." + topicos
+            "conteúdo novo. Não termine com pergunta." + topicos
         )
     return f"Responda à pergunta do estudante sobre o padrão {PADRAO_ENSINADO}."
 
 
 def _exigencias(plano: PlanoTurno, autor: str) -> Exigencias:
-    ex = Exigencias(sem_codigo=True)
+    ex = Exigencias(sem_codigo=True, sem_pergunta_final=plano.intencao not in INTENCOES_COM_PERGUNTA)
     if plano.intencao == "conceito" and plano.pergunta_geral and autor == "tutor":
         ex.termos_obrigatorios = [("Creator", "Criador"), ("Product", "Produto")]
         ex.descricao_termos = "Apresente os participantes Creator e Product (e seus concretos)."
@@ -308,8 +311,10 @@ def _descricao(plano: PlanoTurno, autor: str, *, feedback: str = "", texto_anter
         "A pergunta atual tem prioridade sobre o histórico. Fale diretamente com o "
         "estudante; não comente a sua própria resposta, não use rótulos como 'Resposta "
         "final' e não mencione a referência nem os agentes."
-        + ("" if plano.avaliacao is not None and plano.intencao == "avaliacao"
-           else " Termine com uma pergunta curta para o estudante.")
+        + (" Termine com uma pergunta curta para o estudante."
+           if plano.intencao in INTENCOES_COM_PERGUNTA and plano.avaliacao is None
+           else "" if plano.intencao in INTENCOES_COM_PERGUNTA
+           else " Não termine com pergunta ao estudante: perguntas ficam só nos exercícios.")
     )
     return "\n\n".join(partes)
 

@@ -191,12 +191,18 @@ def _ligar_papeis(oracao: str) -> list[tuple[str, str]]:
         mascarada = re.sub(expressao, lambda m: "#" * len(m.group(0)), mascarada)
     mencoes.sort()
     ligacoes = []
+    fim_verbo = rf"\b{_VERBO}\s+(?:o|a|os|as)?\s*$"
     for i, (ini, fim, papel) in enumerate(mencoes):
         anterior_fim = mencoes[i - 1][1] if i else 0
         proximo_ini = mencoes[i + 1][0] if i + 1 < len(mencoes) else len(oracao)
         depois = oracao[fim:proximo_ini]
         antes = oracao[anterior_fim:ini]
-        if re.search(rf"\b{_VERBO}\s+(?:o|a|os|as)?\s*$", antes):  # "Recibo é o Product"
+        # "o product seria o recibo ReciboPdf e ReciboTexto são os ConcreteProducts":
+        # o sujeito de "são os ConcreteProducts" não pertence ao Product.
+        sujeito = re.search(rf"(\w+(?:\s*(?:,|\be\b)\s*\w+)*)\s+{_VERBO}\s+(?:o|a|os|as)?\s*$", depois)
+        if sujeito and i + 1 < len(mencoes):
+            depois = depois[: sujeito.start(1)]
+        if re.search(fim_verbo, antes):  # "Recibo é o Product"
             trecho = antes
         elif re.match(rf"\s*(?:[:=\-–]|{_VERBO}\b)", depois):  # "Product: Recibo"
             trecho = depois
@@ -208,8 +214,7 @@ def _ligar_papeis(oracao: str) -> list[tuple[str, str]]:
 
 def avaliar_recibos(fala: str) -> AvaliacaoTentativa:
     """Avalia tudo o que o estudante escreveu no exercício (a última menção vale)."""
-    texto = re.sub(r"(?i)(?<!\w)é(?!\w)", "eh", fala)
-    texto = re.sub(r"\bminha (?:resposta|tentativa)\s*:?", " ", normalizar_pergunta(texto))
+    texto = _normalizar(fala)
     av = AvaliacaoTentativa()
     for oracao in _oracoes(texto):
         for papel, trecho in _ligar_papeis(oracao):
@@ -256,9 +261,18 @@ def _proxima_pergunta(av: AvaliacaoTentativa) -> str:
     return "Agora, o que você criaria para emitir recibos em HTML sem mexer em emitir()?"
 
 
+def _normalizar(fala: str) -> str:
+    """Normaliza linha a linha: cada mensagem do estudante fica na sua linha (antes,
+    as mensagens viravam uma linha só e os nomes de uma passavam para a outra)."""
+    linhas = []
+    for linha in fala.splitlines():
+        linha = re.sub(r"(?i)(?<!\w)é(?!\w)", "eh", linha)
+        linhas.append(re.sub(r"\bminha (?:resposta|tentativa)\s*:?", " ", normalizar_pergunta(linha)))
+    return "\n".join(linhas)
+
+
 def _frases(fala: str) -> list[str]:
-    texto = re.sub(r"(?i)(?<!\w)é(?!\w)", "eh", fala)
-    texto = re.sub(r"\bminha (?:resposta|tentativa)\s*:?", " ", normalizar_pergunta(texto))
+    texto = _normalizar(fala)
     return [f.strip() for f in re.split(r"(?<=[.!?;])\s+|\n+", texto) if f.strip()]
 
 
@@ -279,20 +293,12 @@ def avaliar_simple_factory(fala: str) -> AvaliacaoTentativa:
         "código é uma Simple Factory (não é errado, só não é o padrão) e descreveu a "
         "transformação em Factory Method. Exercício concluído!"))
     for frase in _frases(fala):
-        subclasse = re.search(r"\bsub ?class\w*|\bheran\w*|\bherd\w*|\bsobrescr\w*|\bredefin\w*", frase)
-        # 1. Existe subclasse sobrescrevendo um método de criação? (resposta certa: não)
-        if subclasse and re.search(rf"{_NEGA}[^.?!]{{0,40}}(?:sub ?class|heran|herd|sobrescr|redefin)", frase) \
-                and not re.search(r"\bnao sei\b", frase) and not re.search(r"\b(?:criaria|faria|teria que|precisa)\b", frase):
-            av.partes["Sobrescrita"] = Parte("Sobrescrita", True, frase, termos=("subclasse", "sobrescrev"),
-                elogio="Certo: não há nenhuma subclasse redefinindo o método de criação; "
-                       "FabricaPagamento é uma classe só.")
-        elif re.match(r"\s*sim\b", frase) or re.search(rf"(?<!nao )\b(?:existe|tem|ha)\s+(?:uma\s+)?sub ?class", frase):
-            av.partes["Sobrescrita"] = Parte("Sobrescrita", False, frase, termos=("subclasse", "sobrescrev"),
-                ajuste="Neste código não há subclasse: FabricaPagamento é uma classe só, com um "
-                       "método static que escolhe o tipo com if.")
         # "Sim"/"Não" sozinhos respondem à pergunta guia em aberto.
-        if re.fullmatch(r"(?:sim|nao)[.!]?", frase) and "Sobrescrita" not in av.partes:
-            certo = frase.startswith("nao")
+        resposta_curta = re.fullmatch(
+            r"(?:sim|nao)(?:,?\s*(?:existe|tem|ha|nao existe|nao tem|nao ha|nenhuma)(?:\s+sim)?)?[.!]?"
+            r"|(?:nao (?:existe|tem|ha)|nenhuma|existe(?: sim)?|tem(?: sim)?)[.!]?", frase)
+        if resposta_curta and "Sobrescrita" not in av.partes:
+            certo = bool(re.match(r"nao|nenhuma", frase))
             av.partes["Sobrescrita"] = Parte("Sobrescrita", certo, frase, termos=("subclasse", "sobrescrev"),
                 elogio="Certo: não há nenhuma subclasse redefinindo o método de criação; "
                        "FabricaPagamento é uma classe só." if certo else "",
@@ -304,6 +310,17 @@ def avaliar_simple_factory(fala: str) -> AvaliacaoTentativa:
                 ajuste="Ela não aplicou o Factory Method: sem subclasses sobrescrevendo um método de "
                        "criação, um método static com if é uma Simple Factory.")
             continue
+        subclasse = re.search(r"\bsub ?class\w*|\bheran\w*|\bherd\w*|\bsobrescr\w*|\bredefin\w*", frase)
+        # 1. Existe subclasse sobrescrevendo um método de criação? (resposta certa: não)
+        if subclasse and re.search(rf"{_NEGA}[^.?!]{{0,40}}(?:sub ?class|heran|herd|sobrescr|redefin)", frase) \
+                and not re.search(r"\bnao sei\b", frase) and not re.search(r"\b(?:criaria|faria|teria que|precisa)\b", frase):
+            av.partes["Sobrescrita"] = Parte("Sobrescrita", True, frase, termos=("subclasse", "sobrescrev"),
+                elogio="Certo: não há nenhuma subclasse redefinindo o método de criação; "
+                       "FabricaPagamento é uma classe só.")
+        elif re.match(r"\s*sim\b", frase) or re.search(rf"(?<!nao )\b(?:existe|tem|ha)\s+(?:uma\s+)?sub ?class", frase):
+            av.partes["Sobrescrita"] = Parte("Sobrescrita", False, frase, termos=("subclasse", "sobrescrev"),
+                ajuste="Neste código não há subclasse: FabricaPagamento é uma classe só, com um "
+                       "método static que escolhe o tipo com if.")
         # 2. Ela está certa? (resposta certa: não, é Simple Factory)
         nega_fm = re.search(r"\bnao\s+(?:eh|e|esta|seria|foi|se trata de|usa|aplicou)\b[^.?!]{0,30}\bfactory method\b"
                             r"|\bnao\s+(?:esta\s+certa|aplicou)\b|\besta\s+errada\b|\bse\s+enganou\b"

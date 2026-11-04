@@ -39,7 +39,7 @@ from .conhecimento import (
 )
 from .config import MAX_REESCRITAS_GUARDIAO
 from .crew import (
-    INTENCOES_AVALIACAO, PlanoTurno, montar_crew, montar_crew_reescrita, montar_crew_revisao,
+    INTENCOES_AVALIACAO, INTENCOES_COM_PERGUNTA, PlanoTurno, montar_crew, montar_crew_reescrita, montar_crew_revisao,
     pergunta_final_padrao, referencia_revisao, problemas_textos,
 )
 from .erro import ErroEntradaVazia, ErroModeloIndisponivel, ErroSaidaInesperada
@@ -208,6 +208,8 @@ def _montar_resposta(plano: PlanoTurno, textos: dict[str, str], exemplo: str) ->
     if pergunta_final:
         blocos.append(pergunta_final)
     resposta = "\n\n".join(b for b in blocos if b)
+    if plano.intencao not in INTENCOES_COM_PERGUNTA:
+        return resposta
     return garantir_pergunta_final(resposta, pergunta_final_padrao(plano.intencao))
 
 
@@ -350,6 +352,8 @@ def executar_fluxo(
         pergunta=pergunta, resposta=resposta, agente=agente_ultimo, intencao=intencao.tipo,
         agentes=plano.agentes + ["guardiao"], tipo=tipo, revisao=revisao,
         nivel=nivel, exemplo=exemplo if not bloqueada else "", duracao_segundos=duracao,
+        # Exercício terminado: a próxima mensagem não é mais tratada como resposta.
+        exercicio_concluido=bool(plano.avaliacao is not None and plano.avaliacao.concluido),
     )
     return ResultadoFluxo(
         resposta=resposta, agente_ultimo=agente_ultimo, sessoes_atualizadas=True,
