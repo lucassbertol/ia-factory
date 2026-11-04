@@ -133,10 +133,22 @@ class FluxoGuardiaoTest(unittest.TestCase):
 
     def test_exercicio_e_recusa_continuam_sem_modelo(self):
         with patch('agente.fluxo._executar', side_effect=AssertionError('Não deve chamar IA')):
-            exercicio = fluxo.executar_fluxo('Proponha um exercício de Factory Method', 'pratica')
-            recusa = fluxo.executar_fluxo('Invente um padrão Z', 'recusa')
+            exercicio = fluxo.executar_fluxo('Proponha um exercício de Factory Method', 'pratica', nivel='iniciante')
+            recusa = fluxo.executar_fluxo('Invente um padrão Z', 'recusa', nivel='avancado')
         self.assertIn('recibos', exercicio.resposta)
-        self.assertEqual(recusa.tipo, 'orientacao')
+        for resultado, sessao, agente, nivel in (
+            (exercicio, 'pratica', 'inquiridor', 'iniciante'),
+            (recusa, 'recusa', 'regra_deterministica', 'avancado'),
+        ):
+            turno = MemoriaConversa(sessao).historico[-1]
+            self.assertEqual(resultado.tipo, 'orientacao')
+            self.assertEqual(resultado.agente_ultimo, agente)
+            self.assertEqual(turno['resposta'], resultado.resposta)
+            self.assertEqual(turno['intencao'], resultado.intencao)
+            self.assertEqual(turno['nivel'], nivel)
+            self.assertEqual(len(MemoriaConversa(sessao).historico), 1)
+        self.assertEqual(MemoriaConversa('pratica').exercicio_atual, 'recibos')
+        self.assertNotIn('exercicio', MemoriaConversa('recusa').historico[-1])
 
     def test_bloqueio_nao_conta_como_conteudo_estudado(self):
         self.assert_bloqueada(self.rodar(saida(BOM, revisao('INCONCLUSIVO'))))

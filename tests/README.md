@@ -33,4 +33,4 @@ ficavam vazios quando o código era retirado e a afirmação de que o main não 
 `tests/test_avaliacao_exercicio.py` reproduz a avaliação bloqueada no teste web ("o product
 seria o recibo"): o Guardião sem decisão não bloqueia a avaliação, revelar o gabarito bloqueia e
 perguntas de conceito inconclusivas continuam bloqueadas. Também cobre o
-avaliador determinístico do exercício de recibos e a sequência completa do teste web.
+avaliadores determinísticos dos três exercícios e a sequência de prática por etapas.

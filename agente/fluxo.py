@@ -99,7 +99,7 @@ def _planejar(pergunta: str, intencao, memoria: MemoriaConversa, nivel: str) -> 
     agentes = [a for a in decidir_agentes(intencao, pergunta) if a != "guardiao"]
     contexto = (
         memoria.contexto_texto(incluir_exercicio=(
-            intencao.tipo in {"avaliacao", "esclarecimento"} or "exerc" in p
+            intencao.tipo in INTENCOES_AVALIACAO or "exerc" in p
         ))
         if intencao.usar_contexto else ""
     )
@@ -125,7 +125,7 @@ def _planejar(pergunta: str, intencao, memoria: MemoriaConversa, nivel: str) -> 
             exemplo = escolher_exemplo(nivel, memoria.exemplos_mostrados)
             plano.material["exemplificador"] = EXEMPLOS[exemplo].bloco_markdown()
         plano.fatos["exemplificador"] = FATOS_EXEMPLOS[exemplo]
-    if "inquiridor" in agentes and intencao.tipo in {"avaliacao", "esclarecimento"}:
+    if "inquiridor" in agentes and intencao.tipo in INTENCOES_AVALIACAO:
         exercicio = exercicio_por_id(memoria.exercicio_atual)
         if exercicio:
             plano.gabarito = exercicio.gabarito
@@ -259,29 +259,21 @@ def executar_fluxo(
         exercicio_pendente=bool(memoria.exercicio_pendente),
     )
 
-    # Exercícios vêm de um banco verificado (enunciado + gabarito). Na quarta
-    # coleta o modelo inventou um enunciado contraditório que já trazia a solução.
-    if intencao.tipo == "exercicio":
-        exercicio = escolher_exercicio(memoria.exercicios_propostos)
+    if intencao.tipo == "exercicio" or intencao.tipo in INTENCOES_SEM_MODELO:
+        extras = {}
+        if intencao.tipo == "exercicio":
+            exercicio = escolher_exercicio(memoria.exercicios_propostos)
+            resposta, agente = exercicio.enunciado, "inquiridor"
+            extras["exercicio"] = exercicio.ident
+        else:
+            resposta = _resposta_deterministica(intencao, memoria)
+            agente = "regra_deterministica"
         memoria.salvar_turno(
-            pergunta, exercicio.enunciado, "inquiridor", intencao="exercicio",
-            tipo="orientacao", nivel=nivel, exercicio=exercicio.ident,
+            pergunta, resposta, agente, intencao=intencao.tipo,
+            tipo="orientacao", nivel=nivel, **extras,
         )
         return ResultadoFluxo(
-            resposta=exercicio.enunciado, agente_ultimo="inquiridor", sessoes_atualizadas=True,
-            tipo="orientacao", intencao="exercicio",
-            duracao_segundos=round(time.monotonic() - inicio, 2),
-        )
-
-    # Barreiras determinísticas (sem chamar o modelo).
-    if intencao.tipo in INTENCOES_SEM_MODELO:
-        resposta = _resposta_deterministica(intencao, memoria)
-        memoria.salvar_turno(
-            pergunta, resposta, "regra_deterministica", intencao=intencao.tipo,
-            tipo="orientacao", nivel=nivel,
-        )
-        return ResultadoFluxo(
-            resposta=resposta, agente_ultimo="regra_deterministica", sessoes_atualizadas=True,
+            resposta=resposta, agente_ultimo=agente, sessoes_atualizadas=True,
             tipo="orientacao", intencao=intencao.tipo,
             duracao_segundos=round(time.monotonic() - inicio, 2),
         )

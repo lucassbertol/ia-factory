@@ -24,8 +24,8 @@ def _configurar_terminal() -> None:
             pass
 
 
-def _progresso(agentes: list[str]) -> None:
-    print(f"[{' → '.join(agentes)}] pensando...", file=sys.stderr, flush=True)
+def _progresso(_agentes: list[str]) -> None:
+    print("pensando...", file=sys.stderr, flush=True)
 
 
 def executar_uma_vez(pergunta: str, sessao_id: str = "default", nivel: str = "", mostrar_progresso: bool = True) -> int:

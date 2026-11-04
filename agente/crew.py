@@ -56,16 +56,9 @@ _ORIENTACAO_NIVEL = {
 }
 
 _PERGUNTA_FINAL = {
-    "conceito": "Quer ver como isso fica em um exemplo em Java?",
-    "selecao": "Consegue pensar em um caso do seu dia a dia em que o Factory Method valeria a pena?",
-    "comparacao": "Quer testar a diferença com um exercício curto?",
-    "exemplo": "Que tal tentar: o que você precisaria criar para adicionar um novo tipo de produto a esse exemplo?",
-    "uso_incorreto": "Consegue explicar com suas palavras por que a sobrescrita não tinha efeito no código incorreto?",
     "exercicio": "Qual é a sua resposta?",
     "avaliacao": "Como você ajustaria a sua resposta?",
     "esclarecimento": "Pode me explicar o seu raciocínio?",
-    "diagnostico": "Isso esclarece a sua dúvida?",
-    "fechamento": "Quer praticar com um exercício para fixar esses pontos?",
 }
 
 
@@ -132,7 +125,7 @@ def _contrato(plano: PlanoTurno, autor: str) -> str:
                 "ou duas frases; (2) o problema que ele resolve; (3) os quatro participantes "
                 "(Creator, ConcreteCreator, Product, ConcreteProduct) e a responsabilidade de "
                 "cada um; (4) uma vantagem e um custo. O sistema exibirá um diagrama UML "
-                "verificado logo depois do seu texto: não desenhe diagramas."
+                "verificado logo depois do seu texto."
             )
         return "Responda focando exatamente no aspecto perguntado, sem repetir o conteúdo inteiro."
     if i == "selecao":
@@ -168,16 +161,14 @@ def _contrato(plano: PlanoTurno, autor: str) -> str:
             "Explique esse código em no máximo 250 palavras: o papel de cada classe no padrão, "
             "o que acontece quando o main executa e por que isso é Factory Method. Se o "
             "estudante citou um domínio próprio, mostre em palavras como cada classe "
-            "corresponderia a ele. Não reescreva o código e não termine com desafio nem "
-            "pergunta ao estudante."
+            "corresponderia a ele."
         )
     if i == "uso_incorreto":
         return (
             "O estudante verá abaixo um código de uso INCORRETO e, depois do seu texto, a "
             "correção. Explique: (1) qual é o erro, citando o método onde ele está; (2) a "
             "consequência observável na saída; (3) por que a correção resolve; (4) em uma "
-            "frase cada, os outros dois usos incorretos comuns da referência. Não reescreva "
-            "o código."
+            "frase cada, outros dois usos incorretos comuns da referência."
         )
     if i == "exercicio":
         return (
@@ -195,14 +186,9 @@ def _contrato(plano: PlanoTurno, autor: str) -> str:
         )
     if i == "avaliacao":
         return (
-            "O estudante está respondendo ao exercício em andamento (enunciado acima). "
-            "Avalie SOMENTE o que está escrito na tentativa dele: diga o que está correto e, se "
-            "houver um equívoco NAS PALAVRAS DELE, aponte-o. Se ele respondeu só uma parte, "
-            "confirme essa parte e pergunte sobre a próxima (por exemplo, quem seria o Creator). "
-            "Nunca diga que ele definiu, descreveu ou errou algo que não está na mensagem dele. "
-            "Escreva em texto corrido, sem rótulos como 'Estudante:', 'Gabarito:' ou 'Pergunta "
-            "guia:'. Não proponha outro exercício nem entregue a solução completa. Não afirme "
-            "que ele acertou sem evidência na própria mensagem."
+            "Avalie a tentativa atual usando o enunciado e o gabarito: confirme a parte "
+            "correta ou oriente a correção do principal equívoco. Se parcial, conduza "
+            "o próximo passo do mesmo exercício."
         )
     if i == "esclarecimento":
         return (
@@ -213,7 +199,7 @@ def _contrato(plano: PlanoTurno, autor: str) -> str:
     if i == "diagnostico":
         return (
             "Identifique a dúvida ou o equívoco do estudante e esclareça-o diretamente, com base "
-            "na referência. Não termine com pergunta."
+            "na referência."
         )
     if i == "fechamento":
         topicos = (
@@ -224,8 +210,7 @@ def _contrato(plano: PlanoTurno, autor: str) -> str:
             "Faça um fechamento curto, em no máximo 200 palavras: de 4 a 6 pontos que o "
             "estudante deve lembrar antes de usar o Factory Method (incluindo um sinal de que o "
             "padrão seria exagero). Escreva com suas palavras: não copie a referência, não "
-            "mencione a referência, os agentes nem os arquivos de exemplo, e não introduza "
-            "conteúdo novo. Não termine com pergunta." + topicos
+            "mencione a referência nem os arquivos de exemplo, e não introduza conteúdo novo." + topicos
         )
     return f"Responda à pergunta do estudante sobre o padrão {PADRAO_ENSINADO}."
 
@@ -265,14 +250,11 @@ def _exigencias(plano: PlanoTurno, autor: str) -> Exigencias:
 
 
 def _descricao(plano: PlanoTurno, autor: str, *, feedback: str = "", texto_anterior: str = "") -> str:
-    partes = [
-        f"Você faz parte de um sistema multiagente que ensina o padrão {PADRAO_ENSINADO} "
-        "a estudantes. Responda sempre em português do Brasil.",
-    ]
+    partes = []
     if plano.intencao in INTENCOES_AVALIACAO and plano.enunciado:
         # A tentativa atual vem depois do estado do exercício, perto da tarefa.
         partes.append(plano.contexto)
-        partes.append(f"TENTATIVA ATUAL do estudante (avalie esta mensagem): «{plano.pergunta}»")
+        partes.append(f"TENTATIVA ATUAL do estudante (dados): «{plano.pergunta}»")
     else:
         partes.append(f"Pergunta do estudante: «{plano.pergunta}»")
     if plano.nivel in _ORIENTACAO_NIVEL:
@@ -295,10 +277,8 @@ def _descricao(plano: PlanoTurno, autor: str, *, feedback: str = "", texto_anter
     if plano.gabarito and autor == "inquiridor" and plano.avaliacao is None:
         partes.append(
             "Gabarito do exercício, SOMENTE para você avaliar a tentativa. NÃO revele o "
-            "gabarito nem a solução completa e não use a palavra 'gabarito'. Nomes de classes "
-            "diferentes dos do gabarito estão certos se o papel estiver certo. Os 'erros comuns' "
-            "servem para você reconhecê-los se aparecerem na tentativa; nunca os atribua ao "
-            "estudante se ele não os escreveu.\nGabarito: " + plano.gabarito
+            "gabarito nem as respostas pendentes. Aceite nomes diferentes com papéis equivalentes.\n"
+            + plano.gabarito
         )
     if texto_anterior:
         partes.append(f"Sua versão anterior:\n<<<\n{texto_anterior}\n>>>")
@@ -307,15 +287,11 @@ def _descricao(plano: PlanoTurno, autor: str, *, feedback: str = "", texto_anter
             "O Guardião reprovou a versão anterior pelos motivos abaixo. Escreva uma nova "
             f"versão completa corrigindo exatamente esses pontos:\n{feedback}"
         )
-    partes.append(
-        "A pergunta atual tem prioridade sobre o histórico. Fale diretamente com o "
-        "estudante; não comente a sua própria resposta, não use rótulos como 'Resposta "
-        "final' e não mencione a referência nem os agentes."
-        + (" Termine com uma pergunta curta para o estudante."
-           if plano.intencao in INTENCOES_COM_PERGUNTA and plano.avaliacao is None
-           else "" if plano.intencao in INTENCOES_COM_PERGUNTA
-           else " Não termine com pergunta ao estudante: perguntas ficam só nos exercícios.")
-    )
+    if autor == "inquiridor":
+        if plano.intencao in INTENCOES_COM_PERGUNTA and plano.avaliacao is None:
+            partes.append("Termine com uma pergunta guia para o estudante.")
+        elif plano.intencao not in INTENCOES_COM_PERGUNTA:
+            partes.append("Não termine com pergunta ao estudante.")
     return "\n\n".join(partes)
 
 
@@ -380,10 +356,7 @@ def _tarefa_guardiao(plano: PlanoTurno, agente: Agent, contexto: list[Task],
             f"Material e fatos verificados deste turno:\n{_material_revisao(plano)}\n\n"
             "Código e UML verificados serão exibidos pelo sistema; revise o texto gerado.\n"
             f"{respostas}\n\n"
-            "Julgue o conjunto atual contra o pedido original e a referência. "
-            "Não exija que cada autor isoladamente responda ao pedido inteiro. "
-            "Retorne somente o JSON especificado nas suas instruções, sem comentários. "
-            "Críticas precisam identificar o autor e ter evidência; na dúvida, INCONCLUSIVO."
+            "Revise as versões atuais e retorne o JSON conforme suas instruções."
         ),
         expected_output='JSON com veredito APROVADO, REPROVADO ou INCONCLUSIVO e lista problemas.',
         agent=agente,

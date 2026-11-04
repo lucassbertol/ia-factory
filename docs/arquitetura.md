@@ -2,7 +2,7 @@
 
 ## Coordenação e fluxo de um turno
 
-O material didático está centralizado em `agente/referencias/factory_method.md`. O leitor `conhecimento.py` seleciona conceitos por intenção e carrega exemplos, fatos, UML e exercícios de seções identificadas. O arquivo inteiro não é enviado ao modelo: gabaritos entram somente na tarefa de avaliação/esclarecimento do Inquiridor. Os agentes e o Guardião recebem os conceitos selecionados; o Guardião recebe também o material e os fatos do exemplo do turno. Reinicie o processo após editar a referência.
+O material didático está centralizado em `agente/referencias/factory_method.md`. O leitor `conhecimento.py` seleciona conceitos por intenção e carrega exemplos, fatos, UML e exercícios de seções identificadas. O arquivo inteiro não é enviado ao modelo: nos três exercícios cadastrados, o Python avalia a tentativa e o Inquiridor recebe os fatos dessa avaliação. O gabarito só entra na tarefa do Inquiridor quando não há avaliador registrado. Os agentes e o Guardião recebem os conceitos selecionados; o Guardião recebe também o material e os fatos do exemplo do turno. Reinicie o processo após editar a referência.
 
 O sistema usa o processo **sequencial** do CrewAI. Em cada turno participa **um agente autor**, escolhido pela intenção da pergunta, seguido do **Guardião**. Pedidos combinados (por exemplo, 'explique e dê um exemplo') acrescentam autores na ordem Tutor → Exemplificador → Inquiridor. Os passos do fluxo são:
 
@@ -11,7 +11,7 @@ O sistema usa o processo **sequencial** do CrewAI. Em cada turno participa **um 
 - **3. Barreiras determinísticas.** Saudação, pedido para inventar padrão, nome de padrão inexistente (conferido contra um catálogo de nomes), outro padrão do GoF, pedido de solução pronta e assunto fora do escopo recebem uma resposta pedagógica fixa, sem chamar o modelo.
 - **4. Plano do turno.** Conceito, seleção, comparação e fechamento vão para o Tutor; exemplo e uso incorreto, para o Exemplificador; avaliação de tentativa, esclarecimento e diagnóstico, para o Inquiridor. Um pedido de exercício recebe o próximo enunciado do banco verificado, sem chamar o modelo. O sistema escolhe o material verificado (código Java compilado, diagrama UML, fatos do exemplo e gabarito do exercício em andamento).
 - **5. Crew.** A tarefa do autor tem um guardrail determinístico: se o texto tiver um problema objetivo, o CrewAI devolve a lista ao próprio agente para uma nova versão (uma vez). A tarefa do Guardião recebe o texto pelo `context` e devolve o veredito.
-- **6. Decisão de entrega.** O Guardião retorna JSON APROVADO/REPROVADO/INCONCLUSIVO. Erro factual exige autor, trecho real, citação da base e correção; incompletude exige trecho do pedido original. Crítica inválida torna a análise inconclusiva. Uma reprovação fundamentada permite uma rodada de correção dos autores citados (sem retry adicional de guardrail), seguida de revisão explícita do conjunto atualizado. Resposta sem aprovação ou com problemas automáticos remanescentes é bloqueada e substituída por orientação segura.
+- **6. Decisão de entrega.** O Guardião retorna JSON APROVADO/REPROVADO/INCONCLUSIVO. Erro factual exige autor, trecho real, citação da base e correção; incompletude exige trecho do pedido original. Crítica inválida torna a análise inconclusiva. Uma reprovação fundamentada permite uma rodada de correção dos autores citados (sem retry adicional de guardrail), seguida de revisão explícita do conjunto atualizado. Fora da avaliação de exercícios, resposta sem aprovação ou com problemas automáticos remanescentes é bloqueada. Na avaliação/esclarecimento, INCONCLUSIVO pode ser entregue se a validação automática passar e não houve falha na correção. Se o texto for bloqueado e houver avaliação determinística disponível, o fluxo entrega o feedback dessa avaliação com a pergunta verificada; caso contrário, entrega a orientação segura.
 - **7. Montagem e memória.** O fluxo junta material verificado e texto aprovado, ou usa a orientação segura; salva somente a resposta entregue como resposta da conversa, junto com as decisões e tentativas de revisão (intenção, agentes, veredito, exemplo mostrado, nível).
 
 O fluxo atual é: entrada → memória/roteamento → material selecionado → autores/validação → Guardião → aprovação ou uma rodada de correção + nova revisão → resposta aprovada ou orientação segura → memória.
@@ -32,6 +32,7 @@ ia-factory/
     fluxo.py                orquestração de um turno
     fluxo_heuristico.py     roteador de intenções e barreiras anti-alucinação
     crew.py                 agentes, tarefas e crews do CrewAI
+    avaliacao_exercicio.py  avaliadores dos três exercícios e próximo passo
     verificacao.py          guardrails determinísticos e leitura do veredito
     llm.py                  LLM local (Ollama /api/chat, num_ctx, temperatura)
     memoria.py              memória por sessão em JSON
@@ -42,8 +43,32 @@ ia-factory/
     prompts/                tutor.txt, exemplificador.txt, inquiridor.txt, guardiao.txt
     referencias/            factory_method.md: conceitos, Java, UML e exercícios
     web.py                  interface web opcional
-  tests/                    test_unitarios.py, test_perguntas_pdf.py, ollama_simulado.py
-  caderno/                  avaliar_sistema.py, rubrica.md, avaliacoes/
+  tests/                    testes locais de avaliação, roteamento, revisão e coleta do PDF
   docs/                     agentes.md, arquitetura.md, memoria.md
   frontend/                 HTML, CSS e JS da interface web
 ```
+
+## Mapa de responsabilidades e duplicações (04/11/2026)
+
+| Responsabilidade | Fonte responsável | Consumidores |
+|---|---|---|
+| CLI e HTTP | `__main__.py` e `web.py` | Chamam `executar_fluxo`; não escolhem respostas pedagógicas |
+| Intenção e normalização básica | `fluxo_heuristico.py` | Fluxo, avaliação e validações reutilizam as funções existentes |
+| Material didático | `referencias/factory_method.md`, lido por `conhecimento.py` | Plano do turno e tarefas recebem apenas o material selecionado |
+| Sessão e progresso | `memoria.py` | Fluxo carrega e salva o estado; interfaces exibem o histórico |
+| Avaliação dos exercícios cadastrados | `avaliacao_exercicio.py` | Plano recebe fatos e próxima pergunta; Inquiridor redige o feedback |
+| Agentes, contratos e exigências | `crew.py`, `agentes/` e `prompts/` | CrewAI executa o autor e depois o Guardião |
+| Comunicação com o modelo | `llm.py` | API local do Ollama, usada pelas crews |
+| Validação e revisão | `verificacao.py` | Guardrail e barreira final usam as mesmas verificações |
+| Decisão de entrega | `fluxo.py` | Aprovação, correção limitada, exceção na prática e fallback verificado |
+
+A normalização básica de minúsculas/acentos é reutilizada pelas validações; ela
+não se confunde com a correção de palavras do roteador ou com o tratamento de
+negações dos avaliadores. Estes tratamentos têm comportamentos diferentes.
+Respostas fixas e enunciados compartilham agora o mesmo caminho de persistência
+e retorno, preservando seus agentes, intenções e metadados específicos.
+
+A validação do autor e a barreira final foram mantidas: a primeira permite
+retentativa; a segunda impede a entrega de problemas remanescentes. Não são
+substitutos entre si. As regras pedagógicas e as chamadas ao modelo permanecem
+inalteradas nesta limpeza; não foi medido ganho de tempo de resposta.

@@ -11,29 +11,24 @@ ESTRATÉGIA PEDAGÓGICA
 - APROVADO: o texto está correto e atende ao pedido, sem problema identificado.
 - REPROVADO: há erro demonstrável ou parte explícita do pedido sem resposta.
 - INCONCLUSIVO: não consegue fundamentar a avaliação ou a referência é insuficiente.
-- Não reprove por estilo, preferência, ausência de detalhes não pedidos ou pelo código verificado.
-- Não exija que todos os autores expliquem tudo: avalie o conjunto.
+- Não reprove por estilo ou detalhes não pedidos; código e UML fornecidos já são verificados.
+- Avalie o conjunto; cada autor não precisa responder sozinho ao pedido inteiro.
 
 CHECKLIST
-1. Creator declara o factory method; ConcreteCreator o sobrescreve. Product é o contrato e ConcreteProduct o implementa.
-2. Creator e factory method podem ter implementação padrão. O new não desaparece e o main pode mudar.
-3. Simple Factory não é padrão GoF. Abstract Factory trata de famílias de objetos relacionados.
-4. A resposta atende às partes explícitas do pedido? Na avaliação de exercício, orienta sem entregar a solução completa?
-5. Há invenções ou contradições com a referência local?
+Confira atendimento ao pedido, contradições com a referência e preservação das soluções pendentes. Nas avaliações, respeite o escopo especial da tarefa.
 
 EXEMPLOS
 Aprovação:
 {"veredito":"APROVADO","problemas":[]}
 Análise inconclusiva:
 {"veredito":"INCONCLUSIVO","problemas":[]}
-Estrutura de um erro (substitua os campos pelos trechos reais; nunca copie placeholders):
+Erro (preencha com evidências reais, não copie os campos):
 {"veredito":"REPROVADO","problemas":[{"autor":"identificador do autor","tipo":"erro","trecho":"citação literal da resposta","referencia":"citação literal da referência","correcao":"explique objetivamente o que deve ser corrigido"}]}
-Estrutura de incompletude:
+Incompletude:
 {"veredito":"REPROVADO","problemas":[{"autor":"identificador do autor","tipo":"incompleto","pedido":"parte literal do pedido original","correcao":"explique qual parte explícita precisa ser respondida"}]}
 
 CASOS DE ERRO
-- Se não houver evidência suficiente, retorne INCONCLUSIVO, nunca aprove por dúvida.
-- Uma omissão só justifica correção se o usuário pediu explicitamente aquele conteúdo e o conjunto não o fornece.
+- Só aponte omissão de conteúdo explicitamente pedido e ausente no conjunto.
 - Em uma segunda revisão, julgue apenas as versões atuais contra o pedido original e a referência.
 
 REGRAS ANTI-ALUCINAÇÃO

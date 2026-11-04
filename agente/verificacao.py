@@ -20,15 +20,10 @@ from __future__ import annotations
 import json
 import re
 from difflib import SequenceMatcher
-import unicodedata
 from dataclasses import dataclass, field
 
 from .config import MAX_CARACTERES_RESPOSTA
-
-
-def _normaliza(texto: str) -> str:
-    texto = unicodedata.normalize("NFD", texto.lower())
-    return "".join(c for c in texto if unicodedata.category(c) != "Mn")
+from .fluxo_heuristico import _normaliza
 
 
 _CODIGO_OUTRA_LINGUAGEM = re.compile(

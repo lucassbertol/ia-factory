@@ -18,11 +18,12 @@ trocada pela variável de ambiente `AGENTE_MEMORIA_DIR` (os testes usam uma past
 | `timestamp`, `pergunta`, `resposta` | registro da conversa |
 | `intencao` | continuidade ("sim", "e por quê?") e tópicos do fechamento |
 | `agente`, `agentes` | quem respondeu (`regra_deterministica` nas recusas) |
-| `tipo` | `resposta` (modelo) ou `orientacao` (recusa ou boas-vindas, sem modelo) |
+| `tipo` | `resposta` (modelo) ou `orientacao` (resposta fixa, exercício ou fallback após bloqueio) |
 | `exercicio_pendente` | enunciado da atividade em andamento, usado para avaliar tentativas |
 | `revisao` | decisão final, problemas, tentativas, reescrita e bloqueio; rascunhos não substituem a resposta entregue |
 | `nivel` | nível declarado (`--nivel` ou "sou iniciante") |
 | `exemplo` | exemplo Java verificado mostrado, para variar no próximo pedido |
+| `exercicio`, `exercicio_concluido` | identificador da atividade e conclusão indicada pelo avaliador |
 | `duracao_segundos` | tempo do turno |
 
 ## Como entra nos prompts
@@ -47,3 +48,9 @@ obrigatório encerra após cada pergunta, então o estado precisa estar em disco
 
 Turnos com `revisao.bloqueada=true` preservam o exercício pendente e não contam
 como tópicos estudados. A intenção original permanece no registro para auditoria.
+
+Nas avaliações dos exercícios cadastrados, o fluxo monta um contexto específico:
+enunciado, tentativas anteriores desde a proposta e a última pergunta feita ao
+estudante. Não inclui respostas anteriores completas do sistema nesse contexto,
+para reduzir a cópia pelo modelo. O avaliador em Python recebe as tentativas
+acumuladas; seus fatos orientam o texto do Inquiridor e a revisão do Guardião.

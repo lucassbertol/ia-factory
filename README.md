@@ -4,14 +4,14 @@ Projeto final de **ELC1070 — Análise e Projeto de Sistemas OO** (UFSM).
 
 Quatro agentes de IA, coordenados pelo **CrewAI**, ensinam o padrão **Factory Method** a
 estudantes iniciantes. Tudo roda na própria máquina com **Ollama + qwen2.5:3b**: sem chave de
-API, sem nuvem, sem custo.
+API, sem nuvem, sem custo por uso.
 
 | Agente | Papel |
 |---|---|
 | **Tutor do conceito** | Intenção, problema, participantes, consequências, quando usar/evitar, comparações |
 | **Exemplificador** | Explica exemplos Java **verificados** (compilados e executados pela dupla) |
-| **Inquiridor** | Avalia as tentativas dos exercícios (banco verificado, com gabarito que não revela) e diagnostica equívocos |
-| **Guardião** | Decide a entrega: aprova, pede correção fundamentada ou declara análise inconclusiva |
+| **Inquiridor** | Redige feedback a partir da avaliação dos exercícios em Python e esclarece equívocos |
+| **Guardião** | Revisa o texto: aprova, pede correção fundamentada ou declara análise inconclusiva |
 
 Pedidos para inventar padrões, nomes de padrões inexistentes, pedidos de solução pronta e
 assuntos fora do escopo recebem uma recusa educada **sem chamar o modelo**, sempre com um
@@ -50,7 +50,7 @@ python -m pip install -r requirements.txt
 ollama pull qwen2.5:3b              # com o Ollama rodando (ollama serve)
 ```
 
-O `requirements.txt` tem as 138 dependências com versões fixas e marcadores por sistema
+O `requirements.txt` contém dependências com versões fixas e marcadores por sistema
 operacional (por exemplo, `uvloop` só no Linux e `pywin32` só no Windows). Ele é gerado a
 partir de `requirements.in` com `uv pip compile requirements.in --universal -p 3.12`.
 
@@ -72,7 +72,7 @@ Opções:
 | Opção | Efeito |
 |---|---|
 | `--sessao ID` | inicia ou retoma uma conversa (o exercício em andamento é lembrado) |
-| `--limpar-sessao` | apaga a sessão indicada e encerra |
+| `--limpar-sessao` | apaga a sessão indicada; sem pergunta, encerra; com pergunta, inicia uma nova conversa |
 | `--nivel iniciante\|intermediario\|avancado` | ajusta a linguagem e o primeiro exemplo (também detectado em "sou iniciante") |
 | `--silencioso` | não mostra o progresso nem o tempo (que vão para a saída de erro) |
 
@@ -89,6 +89,16 @@ Interface web opcional (a CLI continua sendo o ponto de entrada oficial):
 ```bash
 python -m agente.web          # abra http://127.0.0.1:8000
 ```
+
+Abra a interface pelo endereço do servidor, não pelo HTML diretamente. Use
+`python -m agente.web --port 8001` para escolher outra porta. O servidor atende
+somente no computador local.
+
+As sugestões preenchem o campo sem enviar. **Novo chat** pede confirmação antes
+de apagar a conversa atual. A mesma aba recupera o histórico ao recarregar.
+O cronômetro mostra a espera e a média dos envios concluídos na aba; essa média
+não é persistida e zera ao recarregar. O backend registra a duração do turno
+separadamente na sessão. Falhas de envio não entram na média da interface.
 
 ### Roteiro da avaliação
 
@@ -145,6 +155,7 @@ agente/
   fluxo.py             orquestração de um turno
   fluxo_heuristico.py  roteador de intenções e barreiras anti-alucinação
   crew.py              agentes, tarefas e crews do CrewAI
+  avaliacao_exercicio.py avaliação dos exercícios cadastrados e próximo passo
   verificacao.py       guardrails determinísticos e leitura do veredito do Guardião
   llm.py               LLM local (Ollama /api/chat com num_ctx e temperatura)
   memoria.py           memória por sessão (JSON)
@@ -155,7 +166,7 @@ agente/
   prompts/             prompt de sistema de cada agente (fonte única)
   referencias/         factory_method.md: conceitos, Java, UML e exercícios
   web.py               interface web opcional
-tests/                 coletor das perguntas do roteiro e instruções de execução
+tests/                 testes locais sem modelo e coletor do roteiro
 docs/                  arquitetura, agentes, memória, justificativa, mini-relatório
 frontend/              HTML/CSS/JS da interface web
 ```
@@ -197,7 +208,10 @@ em sessões. Reinicie a CLI/web depois de editar o arquivo.
 O Python seleciona os conceitos conforme a intenção. Código e UML são exibidos
 sem regeneração; explicações continuam sendo geradas pelo modelo. Pedidos de
 exercício continuam recebendo o enunciado do banco, sem chamada ao modelo.
-Gabaritos são enviados apenas à tarefa de avaliação/esclarecimento do Inquiridor.
+Nos exercícios com avaliador registrado em `agente/avaliacao_exercicio.py`, o
+Inquiridor recebe os fatos avaliados pelo Python, sem gabarito. Um exercício novo
+sem avaliador usa a avaliação pelo Inquiridor com gabarito reservado; adicionar
+um enunciado ao Markdown não cria automaticamente um avaliador determinístico.
 
 Para compilar um exemplo manualmente, copie o bloco `:codigo` para um arquivo
 com o nome indicado em `:arquivo`, numa pasta temporária, e use `javac Nome.java`
@@ -210,47 +224,35 @@ Testes locais sem chamadas ao Ollama:
 python -m unittest discover -s tests
 ```
 
-## 10. Decisão de entrega pelo Guardião
+## 10. Avaliação e entrega das respostas
 
-Texto gerado só é exibido com aprovação em JSON válido e sem problemas na
-validação automática. Erros factuais precisam citar trechos reais do texto e da
-base selecionada; incompletude precisa citar a parte explícita do pedido que
-ficou sem resposta. O julgamento semântico continua sendo feito pelo modelo.
+O autor gera o texto e passa por validações automáticas. O Guardião revisa o texto
+com a referência selecionada e retorna JSON. Erros factuais precisam citar trechos
+reais da resposta e da base; incompletude precisa citar o pedido não atendido.
+Uma reprovação fundamentada permite uma rodada de correção, seguida de nova
+revisão. A barreira automática final permanece ativa mesmo com aprovação.
 
-Uma reprovação fundamentada permite uma rodada de correção: cada autor afetado
-reescreve uma vez, sem retry adicional de guardrail nessa etapa. O Guardião
-então revisa o conjunto atualizado contra o pedido original. Só a segunda
-aprovação permite a entrega. Nova reprovação, dúvida, formato inválido, crítica
-sem evidência ou falha técnica nessa rodada resultam numa orientação fixa de
-impossibilidade de validação, sem exibir os rascunhos.
+Fora da avaliação de exercícios, respostas sem aprovação são bloqueadas e dão
+lugar a uma orientação segura. Na avaliação/esclarecimento, uma revisão
+INCONCLUSIVA pode ser entregue se passar pelas verificações automáticas e não
+houver falha técnica na correção. Isso fica registrado em
+`revisao.entregue_sem_aprovacao`; não significa aprovação semântica.
 
-**Exceção: avaliação de tentativas do exercício.** O Guardião não recebe o
-gabarito, então não consegue decidir se a avaliação do Inquiridor está certa. No
-teste da interface web (04/11), ele julgou a tentativa do estudante em vez do texto
-do Inquiridor, as críticas foram descartadas por falta de evidência e as duas
-avaliações de "o product seria o recibo" foram bloqueadas. Por isso, nas intenções
-`avaliacao` e `esclarecimento`, um INCONCLUSIVO não bloqueia: decide a validação
-automática, que inclui a verificação de que o gabarito não foi revelado (citar
-mais de dois nomes reservados do gabarito, como `EmissorPdf` ou `criarRecibo`,
-que o estudante ainda não usou). Uma reprovação fundamentada continua bloqueando.
-O turno fica marcado com `revisao.entregue_sem_aprovacao`.
+Os três exercícios cadastrados possuem avaliadores em Python. Eles analisam as
+tentativas acumuladas, indicam partes corretas, ajustes e a próxima pergunta.
+O Inquiridor redige o feedback com esses fatos; o Guardião recebe os fatos, sem
+o gabarito. Se o texto gerado for bloqueado, o fluxo usa o feedback do avaliador,
+registrado com `revisao.resposta_verificada`. Esses avaliadores usam regras de
+linguagem e podem não reconhecer formulações válidas: não são garantia geral
+de correção semântica.
 
-**Avaliação verificada dos três exercícios do banco** (`agente/avaliacao_exercicio.py`).
-No mesmo teste, o Inquiridor copiou o começo do gabarito e, diante de uma tentativa
-toda correta, inventou equívocos. Agora o sistema confere a tentativa sem modelo,
-parte por parte (Product, ConcreteProducts, Creator, ConcreteCreators e a extensão
-para HTML), aceitando nomes diferentes dos do gabarito quando o papel está certo.
-Os outros dois exercícios têm a mesma conferência: "é Factory Method?" (existe
-subclasse sobrescrevendo? ela está certa? como transformar?) e "estender o exemplo"
-(produto novo, criador novo, o que muda). No teste web, à resposta correta "Não, não
-existe nenhuma subclasse sobrescrevendo...", o modelo tinha respondido "Não está correto".
-O resultado vai ao Inquiridor (e ao Guardião) como fato verificado; o gabarito não
-é mais enviado ao modelo. O sistema define a próxima pergunta e, se o texto do
-modelo falhar na validação (por exemplo, apontando um erro que não existe), entrega
-o retorno verificado em vez da mensagem de "não consegui validar".
+A memória salva o texto entregue e as decisões de revisão. Quando a avaliação
+considera o exercício concluído, o turno recebe `exercicio_concluido` e a atividade
+pode ser encerrada. Turnos bloqueados preservam o exercício pendente; exemplos
+bloqueados não contam como mostrados. Pedidos de exercício e recusas não chamam
+o modelo. Perguntas finais ficam restritas à prática.
 
-A sessão registra as decisões e tentativas em `revisao`; o campo `resposta`
-contém apenas o texto entregue. Um exemplo bloqueado não conta como mostrado; turnos bloqueados não contam
-como tópicos estudados nem encerram o exercício pendente.
-Exercícios do banco e recusas continuam sem chamadas ao modelo. Reinicie o
-processo da interface web para carregar a nova configuração e os prompts.
+Os documentos em `docs/superpowers/` registram propostas de implementação antigas;
+o fluxo atual está descrito neste README e em [arquitetura](docs/arquitetura.md).
+O relatório DOCX e o mini-relatório precisam de revisão da dupla antes da entrega,
+inclusive das afirmações históricas sobre testes e resultados.

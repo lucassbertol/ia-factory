@@ -9,7 +9,6 @@ from pathlib import Path
 # Diretórios
 ROOT_DIR = Path(__file__).resolve().parent.parent
 AGENTE_DIR = Path(__file__).resolve().parent
-PROMPTS_DIR = AGENTE_DIR / "prompts"
 REFERENCIAS_DIR = AGENTE_DIR / "referencias"
 MEMORIA_DIR = Path(os.getenv("AGENTE_MEMORIA_DIR", str(ROOT_DIR / "memoria" / "sessoes")))
 
@@ -41,7 +40,5 @@ MAX_REESCRITAS_GUARDIAO = max(0, min(1, int(os.getenv("MAX_REESCRITAS_GUARDIAO",
 MAX_CARACTERES_RESPOSTA = int(os.getenv("MAX_CARACTERES_RESPOSTA", "2600"))
 
 PADRAO_ENSINADO = "Factory Method"
-LINGUAGEM_EXEMPLOS = "Java"
-CLI_COMANDO = 'python -m agente "pergunta aqui"'
 
 NIVEIS = ("iniciante", "intermediario", "avancado")
