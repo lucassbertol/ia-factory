@@ -16,3 +16,9 @@ Estrutura (UML simplificada):
 
 operacao() chama factoryMethod() e usa o resultado só pelo contrato Product.
 ConcreteCreator sobrescreve factoryMethod() e devolve um ConcreteProduct.
+
+Product define operações de uso do objeto; factoryMethod() pertence ao Creator.
+ConcreteProduct implementa Product; ConcreteCreator herda de Creator.
+O retorno declarado Product pode conter uma instância de ConcreteProduct.
+Creator pode ser concreto e fornecer uma implementação padrão de factoryMethod().
+A operação usa Product; a configuração ainda pode conhecer criadores concretos.

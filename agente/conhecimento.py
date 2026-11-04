@@ -1,7 +1,7 @@
 """Conhecimento local verificado: referência, exemplos Java e diagrama.
 
 Nada aqui acessa a rede. Os exemplos Java foram compilados e executados pela
-dupla (ver tests/test_unitarios.py, que compila cada um quando há JDK).
+dupla. Os arquivos podem ser compilados manualmente com javac.
 O sistema exibe esses arquivos ao estudante em vez de pedir ao modelo de 3B
 que escreva código do zero, porque nos testes o código gerado pelo modelo
 não compilava ou misturava padrões.
@@ -65,7 +65,7 @@ public String avisar(String destinatario) {
 }
 ```
 
-Com essa mudança, `new NotificadorSms().avisar("Bia")` passa a imprimir `SMS para Bia`."""
+Com essa mudança, `new NotificadorSms().avisar("Bia")` passa a retornar `SMS para Bia`; o `main` imprime essa string."""
 
 
 def carregar_referencia() -> str:
@@ -106,27 +106,28 @@ def escolher_exemplo(nivel: str, ja_mostrados: list[str]) -> str:
 FATOS_EXEMPLOS = {
     "basico": (
         "Fatos verificados deste código: Notificacao é o Product; Email e Sms são os "
-        "ConcreteProducts (não criam nada); Notificador é o Creator e declara o factory "
+        "ConcreteProducts: implementam enviar(), retornando strings simuladas, sem envio real; Notificador é o Creator e declara o factory "
         "method criarNotificacao(); NotificadorEmail e NotificadorSms são os ConcreteCreators "
-        "e sobrescrevem criarNotificacao(); avisar() é a operação de negócio e não muda. Para "
+        "e sobrescrevem criarNotificacao(). Notificacao define o contrato de uso (enviar), não de criação. Notificador abstrato só declara criarNotificacao(); a criação concreta fica nas subclasses. O retorno declarado Notificacao é compatível com uma instância de Email ou Sms. avisar() é a operação de negócio e não muda. Para "
         "adicionar um produto novo (por exemplo, WhatsApp), cria-se uma classe Whatsapp que "
         "implementa Notificacao e uma classe NotificadorWhatsapp que estende Notificador; "
-        "nenhuma classe existente é alterada, só o main passa a usar o novo criador."
+        "a operação avisar() e as classes do padrão existentes não precisam mudar; o main, que também é código existente, pode mudar para escolher o novo criador."
     ),
     "padrao": (
         "Fatos verificados deste código: Exportador é o Product; ExportadorTexto e "
         "ExportadorCsv são os ConcreteProducts; Relatorio é o Creator e é uma classe "
-        "concreta, com implementação padrão de criarExportador() (devolve texto); "
+        "concreta, com implementação padrão de criarExportador() (retorna um ExportadorTexto, não uma string); "
         "RelatorioCsv é o ConcreteCreator e sobrescreve criarExportador(); gerar() é a "
-        "operação de negócio e não muda. Isso mostra que o Creator não precisa ser abstrato."
+        "operação de negócio e não muda. Isso mostra que o Creator não precisa ser abstrato. Exportador define exportar(), o contrato de uso do produto, não a criação. ExportadorCsv implementa Exportador; RelatorioCsv estende Relatorio. A saída CSV é uma simulação por substituição de espaços, sem gravação de arquivos e sem serialização CSV geral."
     ),
     "incorreto": (
         "Fatos verificados deste código: o erro está no método avisar() da classe "
         "Notificador (o Creator), que faz new Email() em vez de chamar criarNotificacao(). "
         "A subclasse NotificadorSms está correta, e o main também. Por isso a saída é "
         "'Email para Bia' em vez de 'SMS para Bia'. A correção muda uma linha em avisar(). "
-        "Outros usos incorretos comuns: chamar de Factory Method um método static com "
-        "if/switch (isso é Simple Factory) e criar a hierarquia sem variação real."
+        "Este defeito é instanciação direta que ignora o factory method, não Simple Factory. "
+        "Outros usos incorretos comuns: chamar de Factory Method uma fábrica centralizada "
+        "sem sobrescrita (como ExemploSimpleFactory.java) e criar a hierarquia sem variação real."
     ),
 }
 
@@ -187,8 +188,8 @@ EXERCICIOS = [
         "Para começar: qual classe nova representa o produto WhatsApp e o que ela implementa?",
         "Criar Whatsapp implements Notificacao (ConcreteProduct) e NotificadorWhatsapp extends "
         "Notificador, sobrescrevendo criarNotificacao() para devolver new Whatsapp() "
-        "(ConcreteCreator). Nenhuma classe existente muda (nem Notificador, nem avisar(), nem "
-        "NotificadorEmail/NotificadorSms, nem a interface); só o código de configuração (main) "
+        "(ConcreteCreator). As classes existentes do padrão não precisam mudar (Notificador, "
+        "NotificadorEmail/NotificadorSms e a interface); avisar() permanece igual. O código de configuração (main) "
         "passa a instanciar NotificadorWhatsapp. Erros comuns: pôr um if em avisar(); alterar "
         "NotificadorSms; mudar a interface Notificacao.",
     ),
