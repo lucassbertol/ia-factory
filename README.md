@@ -11,7 +11,7 @@ API, sem nuvem, sem custo.
 | **Tutor do conceito** | Intenção, problema, participantes, consequências, quando usar/evitar, comparações |
 | **Exemplificador** | Explica exemplos Java **verificados** (compilados e executados pela dupla) |
 | **Inquiridor** | Avalia as tentativas dos exercícios (banco verificado, com gabarito que não revela) e diagnostica equívocos |
-| **Guardião** | Confere cada resposta contra a referência local e registra um veredito (APROVADO/REPROVADO) |
+| **Guardião** | Decide a entrega: aprova, pede correção fundamentada ou declara análise inconclusiva |
 
 Pedidos para inventar padrões, nomes de padrões inexistentes, pedidos de solução pronta e
 assuntos fora do escopo recebem uma recusa educada **sem chamar o modelo**, sempre com um
@@ -25,7 +25,7 @@ próximo passo. Detalhes: [arquitetura](docs/arquitetura.md), [agentes](docs/age
 - Python **3.12** (testado com 3.12.10 no Windows e 3.12.3 no Linux)
 - **Ollama** instalado e aberto: https://ollama.com/download
 - Modelo **qwen2.5:3b** (cerca de 2 GB); 8 GB de RAM bastam, 16 GB é o recomendado
-- JDK (opcional), para compilar manualmente os exemplos Java em `agente/referencias/`
+- JDK (opcional), para compilar manualmente os blocos Java de `agente/referencias/factory_method.md`
 
 ## 2. Instalação
 
@@ -116,7 +116,7 @@ Tudo em `agente/config.py`, com valores que podem ser trocados por variáveis de
 | `OLLAMA_NUM_PREDICT` | `800` | respostas curtas e mais rápidas |
 | `OLLAMA_REPEAT_PENALTY` | `1.15` | evita laços de frases repetidas |
 | `OLLAMA_TIMEOUT_SEGUNDOS` | `180` | limite por chamada |
-| `MAX_REESCRITAS_GUARDIAO` | `0` | reescrita pedida pelo Guardião; desligada porque piorava as respostas nos testes reais |
+| `MAX_REESCRITAS_GUARDIAO` | `1` | uma rodada de correção seguida de nova revisão; limitado a 0 ou 1. Zero não libera respostas reprovadas |
 | `AGENTE_DEBUG` | vazio | `1` mostra os logs internos do CrewAI |
 
 A telemetria e o rastreamento do CrewAI são desligados em `agente/__init__.py`. O sistema roda
@@ -150,10 +150,10 @@ agente/
   memoria.py           memória por sessão (JSON)
   recusas.py           recusas educadas e boas-vindas
   catalogo.py          nomes e intenções dos padrões GoF
-  conhecimento.py      exemplos Java, fatos, UML e exercícios
+  conhecimento.py      leitura e seleção das seções da referência
   agentes/             leitura de ROLE/GOAL/BACKSTORY dos prompts
   prompts/             prompt de sistema de cada agente (fonte única)
-  referencias/         referência conceitual e exemplos .java
+  referencias/         factory_method.md: conceitos, Java, UML e exercícios
   web.py               interface web opcional
 tests/                 coletor das perguntas do roteiro e instruções de execução
 docs/                  arquitetura, agentes, memória, justificativa, mini-relatório
@@ -179,3 +179,53 @@ frontend/              HTML/CSS/JS da interface web
 5. Relatório de entrega: `docs/Relatorio_Entrega_FactoryMethod.docx`
 
 Os relatórios ainda possuem campos para a dupla completar antes da entrega.
+
+## 9. Editar o material didático
+
+A fonte única é `agente/referencias/factory_method.md`: conceitos, UML, códigos
+Java, saídas esperadas, fatos, correção e exercícios com gabaritos. `conhecimento.py`
+só lê e seleciona esse conteúdo; não é necessário editar Python para mudar o texto.
+
+Preserve os títulos `## [identificador] Título` e as cercas de código. Seções
+vazias, duplicadas ou campos obrigatórios ausentes geram erro de leitura.
+Os exemplos usam seções `exemplo:ID:arquivo`, `:titulo`, `:codigo`, `:saida` e
+`:fatos` (esta última para os exemplos explicados). Para adicionar um exercício,
+acrescente `exercicio:ID:enunciado` e `exercicio:ID:gabarito` com ID único e estável.
+A ordem no arquivo define a ordem inicial dos exercícios. Não altere IDs já usados
+em sessões. Reinicie a CLI/web depois de editar o arquivo.
+
+O Python seleciona os conceitos conforme a intenção. Código e UML são exibidos
+sem regeneração; explicações continuam sendo geradas pelo modelo. Pedidos de
+exercício continuam recebendo o enunciado do banco, sem chamada ao modelo.
+Gabaritos são enviados apenas à tarefa de avaliação/esclarecimento do Inquiridor.
+
+Para compilar um exemplo manualmente, copie o bloco `:codigo` para um arquivo
+com o nome indicado em `:arquivo`, numa pasta temporária, e use `javac Nome.java`
+e `java Nome`. A saída esperada está em `:saida`. Alterações no código exigem
+nova compilação e conferência da saída antes de considerá-lo verificado.
+
+Testes locais sem chamadas ao Ollama:
+
+```bash
+python -m unittest discover -s tests
+```
+
+## 10. Decisão de entrega pelo Guardião
+
+Texto gerado só é exibido com aprovação em JSON válido e sem problemas na
+validação automática. Erros factuais precisam citar trechos reais do texto e da
+base selecionada; incompletude precisa citar a parte explícita do pedido que
+ficou sem resposta. O julgamento semântico continua sendo feito pelo modelo.
+
+Uma reprovação fundamentada permite uma rodada de correção: cada autor afetado
+reescreve uma vez, sem retry adicional de guardrail nessa etapa. O Guardião
+então revisa o conjunto atualizado contra o pedido original. Só a segunda
+aprovação permite a entrega. Nova reprovação, dúvida, formato inválido, crítica
+sem evidência ou falha técnica nessa rodada resultam numa orientação fixa de
+impossibilidade de validação, sem exibir os rascunhos.
+
+A sessão registra as decisões e tentativas em `revisao`; o campo `resposta`
+contém apenas o texto entregue. Um exemplo bloqueado não conta como mostrado; turnos bloqueados não contam
+como tópicos estudados nem encerram o exercício pendente.
+Exercícios do banco e recusas continuam sem chamadas ao modelo. Reinicie o
+processo da interface web para carregar a nova configuração e os prompts.

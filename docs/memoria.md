@@ -20,7 +20,7 @@ trocada pela variável de ambiente `AGENTE_MEMORIA_DIR` (os testes usam uma past
 | `agente`, `agentes` | quem respondeu (`regra_deterministica` nas recusas) |
 | `tipo` | `resposta` (modelo) ou `orientacao` (recusa ou boas-vindas, sem modelo) |
 | `exercicio_pendente` | enunciado da atividade em andamento, usado para avaliar tentativas |
-| `revisao` | veredito do Guardião, problemas apontados e se houve reescrita |
+| `revisao` | decisão final, problemas, tentativas, reescrita e bloqueio; rascunhos não substituem a resposta entregue |
 | `nivel` | nível declarado (`--nivel` ou "sou iniciante") |
 | `exemplo` | exemplo Java verificado mostrado, para variar no próximo pedido |
 | `duracao_segundos` | tempo do turno |
@@ -44,3 +44,6 @@ obrigatório encerra após cada pergunta, então o estado precisa estar em disco
 - Uso sequencial: evite gravar na mesma sessão pela CLI e pela web ao mesmo tempo.
 - Não há busca semântica no histórico; só os turnos mais recentes cabem no contexto.
 - JSONs antigos continuam aceitos (campos ausentes são inferidos).
+
+Turnos com `revisao.bloqueada=true` preservam o exercício pendente e não contam
+como tópicos estudados. A intenção original permanece no registro para auditoria.

@@ -1,17 +1,97 @@
-"""Conhecimento local verificado: referência, exemplos Java e diagrama.
+"""Leitura e seleção do material didático em referencias/factory_method.md.
 
-Nada aqui acessa a rede. Os exemplos Java foram compilados e executados pela
-dupla. Os arquivos podem ser compilados manualmente com javac.
-O sistema exibe esses arquivos ao estudante em vez de pedir ao modelo de 3B
-que escreva código do zero, porque nos testes o código gerado pelo modelo
-não compilava ou misturava padrões.
+O Markdown é a fonte única; códigos e gabaritos não entram na referência
+conceitual compartilhada. O material é carregado ao iniciar o processo.
 """
-
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from .config import REFERENCIAS_DIR
+
+
+def _ler_secoes(texto: str) -> dict[str, str]:
+    """Lê títulos `## [identificador] Título`, ignorando títulos em cercas."""
+    secoes: dict[str, str] = {}
+    atual = None
+    linhas: list[str] = []
+    cerca = ""
+
+    def salvar():
+        if atual is not None:
+            conteudo = "\n".join(linhas).strip()
+            if not conteudo:
+                raise ValueError(f"Seção vazia na referência: {atual}")
+            secoes[atual] = conteudo
+
+    for linha in texto.splitlines():
+        delimitador = re.match(r"^\s*(`{3,}|~{3,})(.*)$", linha)
+        if delimitador:
+            marca, resto = delimitador.groups()
+            if not cerca:
+                cerca = marca
+            elif marca[0] == cerca[0] and len(marca) >= len(cerca) and not resto.strip():
+                cerca = ""
+            linhas.append(linha)
+            continue
+        titulo = re.fullmatch(r"## \[([a-z0-9_:-]+)\] .+", linha) if not cerca else None
+        if titulo:
+            salvar()
+            atual = titulo.group(1)
+            if atual in secoes:
+                raise ValueError(f"Seção duplicada na referência: {atual}")
+            linhas = []
+        elif atual is not None:
+            linhas.append(linha)
+    if cerca:
+        raise ValueError("Cerca de código não encerrada na referência")
+    salvar()
+    if not secoes:
+        raise ValueError("Referência sem seções identificadas")
+    return secoes
+
+
+def _obter(secoes: dict[str, str], ident: str) -> str:
+    if ident not in secoes:
+        raise ValueError(f"Seção obrigatória ausente na referência: {ident}")
+    return secoes[ident]
+
+
+def _bloco(secoes: dict[str, str], ident: str, linguagem: str) -> str:
+    texto = _obter(secoes, ident)
+    achado = re.fullmatch(r"```" + linguagem + r"\n(.*?)\n```", texto, re.DOTALL)
+    if not achado or not achado.group(1).strip():
+        raise ValueError(f"Bloco {linguagem} inválido na referência: {ident}")
+    return achado.group(1)
+
+
+_SECOES = _ler_secoes((REFERENCIAS_DIR / "factory_method.md").read_text(encoding="utf-8"))
+_BASE = ("definicao", "problema", "participantes", "cuidados", "confiabilidade", "fontes")
+_POR_INTENCAO = {
+    "conceito": ("consequencias", "selecao"),
+    "selecao": ("consequencias", "selecao"),
+    "comparacao": ("comparacao",),
+    "exemplo": ("distincoes",),
+    "uso_incorreto": ("usos_incorretos", "distincoes"),
+    "diagnostico": ("comparacao", "usos_incorretos", "distincoes"),
+    "avaliacao": ("comparacao", "usos_incorretos"),
+    "esclarecimento": ("comparacao", "usos_incorretos"),
+    "fechamento": ("consequencias", "selecao", "comparacao", "usos_incorretos"),
+    "exercicio": ("comparacao", "usos_incorretos"),
+}
+for _ident in dict.fromkeys(_BASE + tuple(i for ids in _POR_INTENCAO.values() for i in ids)):
+    _obter(_SECOES, _ident)
+
+
+def carregar_referencia(intencao: str = "conceito") -> str:
+    """Seleciona conceitos; nunca inclui exercícios, gabaritos ou código Java."""
+    ids = _BASE + _POR_INTENCAO.get(intencao, _POR_INTENCAO["conceito"])
+    return "\n\n".join(f"## [{ident}]\n{_obter(_SECOES, ident)}" for ident in ids)
+
+
+def carregar_uml() -> str:
+    return _bloco(_SECOES, "uml", "text")
 
 
 @dataclass(frozen=True)
@@ -19,10 +99,7 @@ class ExemploJava:
     arquivo: str
     titulo: str
     saida_esperada: str
-
-    @property
-    def codigo(self) -> str:
-        return (REFERENCIAS_DIR / self.arquivo).read_text(encoding="utf-8").strip()
+    codigo: str
 
     def bloco_markdown(self) -> str:
         return (
@@ -32,52 +109,46 @@ class ExemploJava:
         )
 
 
-EXEMPLOS = {
-    "basico": ExemploJava(
-        "ExemploFactoryMethod.java",
-        "Exemplo verificado: notificações (Creator abstrato)",
-        "Email para Ana\nSMS para Bia",
-    ),
-    "padrao": ExemploJava(
-        "ExemploFactoryMethodPadrao.java",
-        "Exemplo verificado: relatórios (Creator concreto com implementação padrão)",
-        "[TXT] Relatorio de vendas\n[CSV] Relatorio;de;vendas",
-    ),
-    "incorreto": ExemploJava(
-        "ExemploUsoIncorreto.java",
-        "Exemplo de uso INCORRETO (compila, mas o padrão não funciona)",
-        "Email para Bia",
-    ),
-    "simple_factory": ExemploJava(
-        "ExemploSimpleFactory.java",
-        "Contraste: Simple Factory (não é o Factory Method do GoF)",
-        "Email simulado\nSMS simulado",
-    ),
-}
+EXEMPLOS: dict[str, ExemploJava] = {}
+FATOS_EXEMPLOS: dict[str, str] = {}
+for _secao in _SECOES:
+    if _secao.startswith("exemplo:") and _secao.endswith(":arquivo"):
+        _id = _secao.split(":")[1]
+        _prefixo = f"exemplo:{_id}:"
+        EXEMPLOS[_id] = ExemploJava(
+            arquivo=_obter(_SECOES, _prefixo + "arquivo"),
+            titulo=_obter(_SECOES, _prefixo + "titulo"),
+            saida_esperada=_bloco(_SECOES, _prefixo + "saida", "text"),
+            codigo=_bloco(_SECOES, _prefixo + "codigo", "java"),
+        )
+        if _id != "simple_factory":
+            FATOS_EXEMPLOS[_id] = _obter(_SECOES, _prefixo + "fatos")
+for _id in ("basico", "padrao", "incorreto", "simple_factory"):
+    if _id not in EXEMPLOS:
+        raise ValueError(f"Exemplo obrigatório ausente na referência: {_id}")
 
-CORRECAO_USO_INCORRETO = """\
-**Correção** (uma linha muda em `avisar()`):
-
-```java
-public String avisar(String destinatario) {
-    Notificacao notificacao = criarNotificacao(); // usa o factory method
-    return notificacao.enviar(destinatario);
-}
-```
-
-Com essa mudança, `new NotificadorSms().avisar("Bia")` passa a retornar `SMS para Bia`; o `main` imprime essa string."""
+CORRECAO_USO_INCORRETO = _obter(_SECOES, "correcao_uso_incorreto")
 
 
-def carregar_referencia() -> str:
-    """Síntese conceitual que fundamenta as instruções de todos os agentes."""
-    conteudo = (REFERENCIAS_DIR / "factory_method.md").read_text(encoding="utf-8")
-    if not conteudo.strip():
-        raise ValueError("Referência conceitual local vazia: factory_method.md")
-    return conteudo
+@dataclass(frozen=True)
+class Exercicio:
+    ident: str
+    enunciado: str
+    gabarito: str
 
 
-def carregar_uml() -> str:
-    return (REFERENCIAS_DIR / "estrutura_uml.txt").read_text(encoding="utf-8").rstrip()
+EXERCICIOS = [
+    Exercicio(
+        ident=secao.split(":")[1],
+        enunciado=_obter(_SECOES, secao),
+        gabarito=_obter(_SECOES, secao.removesuffix("enunciado") + "gabarito"),
+    )
+    for secao in _SECOES
+    if secao.startswith("exercicio:") and secao.endswith(":enunciado")
+]
+if not EXERCICIOS:
+    raise ValueError("Banco de exercícios vazio na referência")
+carregar_uml()
 
 
 def escolher_exemplo(nivel: str, ja_mostrados: list[str]) -> str:
@@ -97,103 +168,6 @@ def escolher_exemplo(nivel: str, ja_mostrados: list[str]) -> str:
             return exemplo
     # Ambos já vistos: alterna em relação ao último mostrado.
     return "padrao" if vistos[-1] == "basico" else "basico"
-
-
-# ---------------------------------------------------------------- fatos dos exemplos
-# Entregues ao Exemplificador junto com o código. Na quarta coleta (04/11) o
-# modelo trocou papéis ("Email e Sms implementam a criação") e localizou mal o
-# erro do exemplo incorreto; estes fatos verificados fixam essas respostas.
-FATOS_EXEMPLOS = {
-    "basico": (
-        "Fatos verificados deste código: Notificacao é o Product; Email e Sms são os "
-        "ConcreteProducts: implementam enviar(), retornando strings simuladas, sem envio real; Notificador é o Creator e declara o factory "
-        "method criarNotificacao(); NotificadorEmail e NotificadorSms são os ConcreteCreators "
-        "e sobrescrevem criarNotificacao(). Notificacao define o contrato de uso (enviar), não de criação. Notificador abstrato só declara criarNotificacao(); a criação concreta fica nas subclasses. O retorno declarado Notificacao é compatível com uma instância de Email ou Sms. avisar() é a operação de negócio e não muda. Para "
-        "adicionar um produto novo (por exemplo, WhatsApp), cria-se uma classe Whatsapp que "
-        "implementa Notificacao e uma classe NotificadorWhatsapp que estende Notificador; "
-        "a operação avisar() e as classes do padrão existentes não precisam mudar; o main, que também é código existente, pode mudar para escolher o novo criador."
-    ),
-    "padrao": (
-        "Fatos verificados deste código: Exportador é o Product; ExportadorTexto e "
-        "ExportadorCsv são os ConcreteProducts; Relatorio é o Creator e é uma classe "
-        "concreta, com implementação padrão de criarExportador() (retorna um ExportadorTexto, não uma string); "
-        "RelatorioCsv é o ConcreteCreator e sobrescreve criarExportador(); gerar() é a "
-        "operação de negócio e não muda. Isso mostra que o Creator não precisa ser abstrato. Exportador define exportar(), o contrato de uso do produto, não a criação. ExportadorCsv implementa Exportador; RelatorioCsv estende Relatorio. A saída CSV é uma simulação por substituição de espaços, sem gravação de arquivos e sem serialização CSV geral."
-    ),
-    "incorreto": (
-        "Fatos verificados deste código: o erro está no método avisar() da classe "
-        "Notificador (o Creator), que faz new Email() em vez de chamar criarNotificacao(). "
-        "A subclasse NotificadorSms está correta, e o main também. Por isso a saída é "
-        "'Email para Bia' em vez de 'SMS para Bia'. A correção muda uma linha em avisar(). "
-        "Este defeito é instanciação direta que ignora o factory method, não Simple Factory. "
-        "Outros usos incorretos comuns: chamar de Factory Method uma fábrica centralizada "
-        "sem sobrescrita (como ExemploSimpleFactory.java) e criar a hierarquia sem variação real."
-    ),
-}
-
-
-# ---------------------------------------------------------------- exercícios
-@dataclass(frozen=True)
-class Exercicio:
-    ident: str
-    enunciado: str
-    gabarito: str  # nunca é mostrado ao estudante; serve para o Inquiridor avaliar
-
-
-EXERCICIOS = [
-    Exercicio(
-        "recibos",
-        "**Exercício: recibos**\n\n"
-        "Uma loja emite recibos em PDF e em texto. O método `emitir()` faz sempre os mesmos "
-        "passos (registra a venda e entrega o recibo); só muda o tipo de recibo criado. A loja "
-        "quer, no futuro, emitir recibos em HTML sem mexer em `emitir()`.\n\n"
-        "Usando o Factory Method, quais classes seriam o Product, os ConcreteProducts, o "
-        "Creator e os ConcreteCreators? Não precisa escrever código: descreva as classes e "
-        "quem sobrescreve o quê.\n\n"
-        "Para começar: quem seria o Product?",
-        "Product: Recibo (interface). ConcreteProducts: ReciboPdf e ReciboTexto. Creator: "
-        "Emissor, com emitir() (operação de negócio) e criarRecibo() (factory method). "
-        "ConcreteCreators: EmissorPdf e EmissorTexto, que sobrescrevem criarRecibo(). emitir() "
-        "chama criarRecibo() e usa o Recibo só pela interface. Para HTML: criar ReciboHtml e "
-        "EmissorHtml, sem alterar emitir(). Erros comuns: colocar if/switch dentro de "
-        "emitir(); dizer que ReciboPdf sobrescreve o factory method; usar um método static.",
-    ),
-    Exercicio(
-        "simple_factory",
-        "**Exercício: é Factory Method?**\n\n"
-        "Uma colega escreveu o código abaixo para criar formas de pagamento e disse que "
-        "aplicou o padrão Factory Method:\n\n"
-        "```java\nclass FabricaPagamento {\n    static Pagamento criar(String tipo) {\n"
-        "        if (tipo.equals(\"pix\")) return new Pix();\n        return new Cartao();\n"
-        "    }\n}\n```\n\n"
-        "Ela está certa? Explique o porquê e descreva, sem escrever o código completo, como "
-        "transformar isso em Factory Method.\n\n"
-        "Para começar: neste código, existe alguma subclasse sobrescrevendo um método de criação?",
-        "Não é Factory Method: é Simple Factory (método static com if, escolha centralizada, "
-        "sem sobrescrita em subclasses; não é padrão GoF). Para virar Factory Method: um "
-        "Creator (por exemplo, Caixa) com a operação de negócio finalizarCompra() que chama o "
-        "factory method criarPagamento() (método de instância, não static); ConcreteCreators "
-        "CaixaPix e CaixaCartao sobrescrevem criarPagamento() devolvendo new Pix() e new "
-        "Cartao(); Pagamento é o Product. Uma forma nova de pagamento exige novas classes, "
-        "sem editar finalizarCompra(). Simple Factory não é errado em si; só não é o padrão.",
-    ),
-    Exercicio(
-        "extensao",
-        "**Exercício: estender o exemplo**\n\n"
-        "No exemplo verificado das notificações (`Notificacao`, `Email`, `Sms`, `Notificador`, "
-        "`NotificadorEmail` e `NotificadorSms`), a empresa quer enviar avisos também por "
-        "WhatsApp.\n\n"
-        "Quais classes você criaria e quais classes existentes precisariam mudar? Lembre que "
-        "`avisar()` não deve ser alterado.\n\n"
-        "Para começar: qual classe nova representa o produto WhatsApp e o que ela implementa?",
-        "Criar Whatsapp implements Notificacao (ConcreteProduct) e NotificadorWhatsapp extends "
-        "Notificador, sobrescrevendo criarNotificacao() para devolver new Whatsapp() "
-        "(ConcreteCreator). As classes existentes do padrão não precisam mudar (Notificador, "
-        "NotificadorEmail/NotificadorSms e a interface); avisar() permanece igual. O código de configuração (main) "
-        "passa a instanciar NotificadorWhatsapp. Erros comuns: pôr um if em avisar(); alterar "
-        "NotificadorSms; mudar a interface Notificacao.",
-    ),
-]
 
 
 def escolher_exercicio(ja_propostos: list[str]) -> Exercicio:

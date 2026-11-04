@@ -15,7 +15,7 @@ Como são usados:
 
 - `agente/agentes/__init__.py` lê ROLE, GOAL e BACKSTORY, que o CrewAI recebe em campos próprios;
   as demais seções vão junto com o backstory.
-- `agente/crew.py` anexa ao backstory a referência `agente/referencias/factory_method.md` e
+- `agente/crew.py` anexa ao backstory as seções conceituais selecionadas de `agente/referencias/factory_method.md`, sem gabaritos, e
   monta a descrição da tarefa do turno (pergunta, nível, histórico, contrato da intenção e
   material verificado).
 - `tests/test_unitarios.py` confere que os quatro arquivos têm todas as seções do Anexo B.

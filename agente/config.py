@@ -33,11 +33,9 @@ OLLAMA_TIMEOUT_SEGUNDOS = int(os.getenv("OLLAMA_TIMEOUT_SEGUNDOS", "180"))
 # Histórico injetado nos prompts (caracteres).
 MAX_CONTEXTO_CARACTERES = int(os.getenv("MAX_CONTEXTO_CARACTERES", "2000"))
 
-# Reescrita pedida pelo Guardião: DESLIGADA por padrão (0). Em três coletas com o
-# modelo real (04/11), nenhuma reescrita corrigiu um erro real e 7 pioraram a
-# resposta: o Guardião de 3B aponta problemas que não existem. O veredito continua
-# sendo registrado na memória e nas evidências. Use 1 para reativar.
-MAX_REESCRITAS_GUARDIAO = int(os.getenv("MAX_REESCRITAS_GUARDIAO", "0"))
+# Uma rodada de correção, sempre seguida de nova revisão. Zero desliga apenas
+# a correção: respostas sem aprovação continuam bloqueadas. Nunca excede 1.
+MAX_REESCRITAS_GUARDIAO = max(0, min(1, int(os.getenv("MAX_REESCRITAS_GUARDIAO", "1"))))
 
 # Tamanho máximo aceito para o texto de um agente antes de pedir resumo.
 MAX_CARACTERES_RESPOSTA = int(os.getenv("MAX_CARACTERES_RESPOSTA", "2600"))

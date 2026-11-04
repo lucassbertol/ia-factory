@@ -76,6 +76,7 @@ class MemoriaConversa:
             "agente": agente,
             "intencao": intencao,
             "exercicio_pendente": (
+                self.exercicio_pendente if extras.get("revisao", {}).get("bloqueada") else
                 resposta if intencao == "exercicio" else
                 "" if intencao == "fechamento" else self.exercicio_pendente
             ),
@@ -186,6 +187,8 @@ class MemoriaConversa:
     def topicos_estudados(self) -> list[str]:
         vistos: list[str] = []
         for turno in self._historico:
+            if turno.get("revisao", {}).get("bloqueada"):
+                continue
             rotulo = _ROTULOS_TOPICO.get(turno.get("intencao", ""))
             if rotulo and rotulo not in vistos:
                 vistos.append(rotulo)

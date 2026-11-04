@@ -6,7 +6,9 @@ outra linguagem, papéis trocados, resposta longa demais...), o CrewAI devolve a
 lista de problemas ao próprio agente e pede uma nova versão. Na segunda
 tentativa o validador não reprova mais: aplica correções mecânicas (remove
 blocos de código, rótulos de meta-revisão) e libera o texto. Assim o tempo de
-resposta fica limitado e a CLI nunca quebra por causa de um guardrail.
+resposta fica limitado. A decisão final do fluxo ainda bloqueia texto com
+problemas remanescentes, mesmo que o Guardião o aprove. Na reescrita pedida
+pelo Guardião não há retry adicional: aplica-se a limpeza e depois a validação final.
 
 As regras cobrem erros que de fato apareceram nas evidências de teste com o
 qwen2.5:3b (ex.: "ConcreteProduct sobrescreve o factory method", resposta com
@@ -15,6 +17,7 @@ código C#, "o Factory Method é confundido com o Factory Method").
 
 from __future__ import annotations
 
+import json
 import re
 import unicodedata
 from dataclasses import dataclass, field
@@ -294,8 +297,9 @@ def premissas_falsas(pergunta: str) -> list[str]:
 class ValidadorDeterministico:
     """Guardrail de Task do CrewAI: devolve (aprovado, texto_ou_feedback)."""
 
-    def __init__(self, exigencias: Exigencias) -> None:
+    def __init__(self, exigencias: Exigencias, permitir_retentativa: bool = True) -> None:
         self.exigencias = exigencias
+        self.permitir_retentativa = permitir_retentativa
         self.tentativas = 0
         self.problemas_por_tentativa: list[list[str]] = []
 
@@ -306,7 +310,7 @@ class ValidadorDeterministico:
         problemas = encontrar_problemas(texto, self.exigencias)
         self.problemas_por_tentativa.append(problemas)
         self.tentativas += 1
-        if problemas and self.tentativas == 1:
+        if problemas and self.tentativas == 1 and self.permitir_retentativa:
             return False, (
                 "Sua resposta tem problemas. Escreva uma nova versão completa, corrigindo:\n- "
                 + "\n- ".join(problemas)
@@ -314,54 +318,64 @@ class ValidadorDeterministico:
         return True, corrigir_mecanicamente(texto, self.exigencias) or texto
 
 
-def ler_veredito(texto: str) -> tuple[bool | None, list[str]]:
-    """Interpreta a saída do Guardião: (aprovado, problemas).
+def avaliar_revisao(texto: str, textos: dict[str, str], pergunta: str, referencia: str) -> dict:
+    """Valida o contrato e as citações; não substitui o julgamento semântico."""
+    resultado = {"veredito": "INCONCLUSIVO", "problemas": [],
+                 "problemas_descartados": [], "motivo": "Formato de revisão inválido."}
+    cercado = re.fullmatch(r"```(?:json)?\s*\n(.*?)\n```", texto.strip(), re.DOTALL)
+    if cercado:
+        texto = cercado.group(1)
 
-    None indica saída fora do formato; nesse caso o fluxo não reescreve nada
-    (as verificações determinísticas já foram aplicadas).
-    """
-    norm = _normaliza(texto)
-    problemas = [
-        re.sub(r"^\s*(?:[-*•]|\d+[.)])\s*", "", linha).strip()
-        for linha in texto.splitlines()
-        if re.match(r"^\s*(?:[-*•]|\d+[.)])\s+\S", linha)
-    ]
-    if "reprovado" in norm:
-        return False, problemas[:3]
-    if "aprovado" in norm:
-        return True, []
-    return None, []
+    def sem_chaves_duplicadas(pares):
+        objeto = {}
+        for chave, valor in pares:
+            if chave in objeto:
+                raise ValueError("Chave JSON duplicada")
+            objeto[chave] = valor
+        return objeto
 
+    try:
+        dados = json.loads(texto, object_pairs_hook=sem_chaves_duplicadas)
+    except (ValueError, TypeError):
+        return resultado
+    if not isinstance(dados, dict) or set(dados) != {"veredito", "problemas"}:
+        return resultado
+    status, problemas = dados["veredito"], dados["problemas"]
+    if status not in ("APROVADO", "REPROVADO", "INCONCLUSIVO") or not isinstance(problemas, list):
+        return resultado
+    if len(problemas) > 3 or (status != "REPROVADO" and problemas):
+        return resultado
+    if status == "APROVADO":
+        return {**resultado, "veredito": "APROVADO", "motivo": ""}
+    if status == "INCONCLUSIVO" or not problemas:
+        return {**resultado, "motivo": "O Guardião não apresentou uma decisão fundamentada."}
 
-# Trechos usados como exemplo no prompt do Guardião: ele às vezes os copia.
-_EXEMPLOS_DO_PROMPT = {
-    "o concreteproduct sobrescreve o metodo de criacao",
-    "o simple factory e um dos padroes gof",
-}
+    def citado(trecho, origem, minimo):
+        return (isinstance(trecho, str) and len(trecho.split()) >= minimo
+                and " ".join(_normaliza(trecho).split()) in " ".join(_normaliza(origem).split()))
 
-
-def problemas_fundamentados(problemas: list[str], resposta: str) -> tuple[list[str], list[str]]:
-    """Separa os problemas do Guardião que citam um trecho real da resposta.
-
-    No teste real (04/11), o Guardião de 3B reprovou as 8 respostas com
-    problemas inventados ("o Factory Method não é GoF"), e a reescrita copiou
-    essas falsidades. Por isso cada problema precisa citar, entre aspas, um
-    trecho que exista de fato na resposta, e não pode contradizer a
-    referência. Os demais são descartados (e registrados na memória).
-    """
-    alvo = re.sub(r"\s+", " ", _normaliza(resposta))
     aceitos, descartados = [], []
     for problema in problemas:
-        trechos = [t for t in re.findall(r"[\"“«']([^\"”»']+)[\"”»']", problema) if len(t.split()) >= 3]
-        citado = any(re.sub(r"\s+", " ", _normaliza(t)).strip(" .") in alvo for t in trechos)
-        # Precisa dizer o que está errado, além de citar (só a citação não é problema).
-        resto = re.sub(r"[\"“«'][^\"”»']*[\"”»']", "", problema)
-        explicado = len(re.findall(r"\w+", resto)) >= 4
-        copiado_do_prompt = any(_normaliza(t) in _EXEMPLOS_DO_PROMPT for t in trechos)
-        citado = citado and explicado and not copiado_do_prompt
-        contradiz = bool(re.search(_FM_NAO_GOF, _normaliza(problema)))
-        (aceitos if citado and not contradiz else descartados).append(problema)
-    return aceitos, descartados
+        valido = isinstance(problema, dict)
+        if valido:
+            autor = problema.get("autor")
+            correcao = problema.get("correcao")
+            valido = (isinstance(autor, str) and autor in textos
+                      and isinstance(correcao, str) and len(correcao.split()) >= 4
+                      and not re.search(_FM_NAO_GOF, _normaliza(correcao)))
+        if valido:
+            if problema.get("tipo") == "erro":
+                valido = (citado(problema.get("trecho"), textos[autor], 3)
+                          and citado(problema.get("referencia"), referencia, 4))
+            elif problema.get("tipo") == "incompleto":
+                valido = citado(problema.get("pedido"), pergunta, 2)
+            else:
+                valido = False
+        (aceitos if valido else descartados).append(problema)
+    # Uma crítica inventada invalida a revisão, sem orientar reescritas parciais.
+    return {"veredito": "INCONCLUSIVO" if descartados else "REPROVADO",
+            "problemas": aceitos, "problemas_descartados": descartados,
+            "motivo": "Crítica sem evidência verificável." if descartados else ""}
 
 
 def garantir_pergunta_final(texto: str, pergunta_padrao: str) -> str:

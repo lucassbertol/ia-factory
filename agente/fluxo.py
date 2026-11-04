@@ -7,9 +7,9 @@
   4. Monta o plano do turno: agentes autores, contexto, nível e material
      verificado (código Java compilado, diagrama UML).
   5. Executa a crew: autores (com guardrails) e o Guardião (veredito).
-  6. O veredito do Guardião é registrado. A reescrita pedida por ele existe, mas
-     vem desligada (MAX_REESCRITAS_GUARDIAO=0): nas três coletas com o modelo
-     real ela nunca corrigiu um erro real e piorou 7 respostas.
+  6. Só entrega texto aprovado. Uma reprovação fundamentada permite uma
+     rodada de correção seguida de nova revisão; incerteza ou erro persistente
+     produzem orientação segura sem expor o rascunho.
   7. Monta a resposta final (material verificado + texto dos agentes) e salva
      o turno na memória.
 """
@@ -34,7 +34,10 @@ from .conhecimento import (
     exercicio_por_id,
 )
 from .config import MAX_REESCRITAS_GUARDIAO
-from .crew import PlanoTurno, montar_crew, montar_crew_reescrita, pergunta_final_padrao
+from .crew import (
+    PlanoTurno, montar_crew, montar_crew_reescrita, montar_crew_revisao,
+    pergunta_final_padrao, referencia_revisao, problemas_textos,
+)
 from .erro import ErroEntradaVazia, ErroModeloIndisponivel, ErroSaidaInesperada
 from .fluxo_heuristico import (
     INTENCOES_SEM_MODELO,
@@ -45,16 +48,9 @@ from .fluxo_heuristico import (
 )
 from .memoria import MemoriaConversa
 from .verificacao import (
-    Exigencias,
-    corrigir_mecanicamente,
-    cortar_frase_incompleta,
-    encontrar_problemas,
+    avaliar_revisao,
     garantir_pergunta_final,
-    ler_veredito,
     premissas_falsas,
-    problemas_fundamentados,
-    remover_meta_revisao,
-    remover_repeticoes,
 )
 
 
@@ -256,42 +252,51 @@ def executar_fluxo(
         raise ErroSaidaInesperada(
             f"A crew devolveu {len(saidas_tarefas)} saídas para {len(plano.agentes) + 1} tarefas."
         )
-    textos = {
-        autor: remover_meta_revisao(str(t.raw or ""))
-        for autor, t in zip(plano.agentes, saidas_tarefas[:-1])
-    }
-    veredito_bruto = str(saidas_tarefas[-1].raw or "")
-    aprovado, problemas = ler_veredito(veredito_bruto)
-    autor = plano.agentes[-1]
-    aceitos, descartados = problemas_fundamentados(problemas, textos[autor])
-    revisao = {"veredito": {True: "APROVADO", False: "REPROVADO", None: "ILEGIVEL"}[aprovado],
-               "problemas": aceitos, "problemas_descartados": descartados, "reescrito": False}
+    # As saídas já passaram pelo guardrail. Não modificar texto após a revisão.
+    textos = {autor: str(t.raw or "") for autor, t in zip(plano.agentes, saidas_tarefas[:-1])}
+    decisao = avaliar_revisao(str(saidas_tarefas[-1].raw or ""), textos,
+                             pergunta, referencia_revisao(plano))
+    tentativas = [decisao]
+    reescrito = False
+    falha_correcao = False
+    if decisao["veredito"] == "REPROVADO" and MAX_REESCRITAS_GUARDIAO > 0:
+        try:
+            # Uma rodada: cada autor citado é chamado no máximo uma vez.
+            for autor in plano.agentes:
+                problemas = [p for p in decisao["problemas"] if p["autor"] == autor]
+                if problemas:
+                    nova = _executar(lambda: montar_crew_reescrita(plano, autor, textos[autor], problemas))
+                    textos[autor] = str(getattr(nova, "raw", "") or "")
+                    reescrito = True
+            if problemas_textos(plano, textos):
+                decisao = {"veredito": "INCONCLUSIVO", "problemas": [],
+                           "problemas_descartados": [], "motivo": "Correção falhou na validação automática."}
+            else:
+                revisada = _executar(lambda: montar_crew_revisao(plano, textos))
+                decisao = avaliar_revisao(str(getattr(revisada, "raw", "") or ""), textos,
+                                         pergunta, referencia_revisao(plano))
+        except (ErroModeloIndisponivel, ErroSaidaInesperada):
+            falha_correcao = True
+            decisao = {"veredito": "INCONCLUSIVO", "problemas": [],
+                       "problemas_descartados": [], "motivo": "Não foi possível concluir a correção/revisão."}
+        tentativas.append(decisao)
 
-    # Só reescreve por problemas que citam um trecho real da resposta. A nova
-    # versão só substitui a anterior se não tiver mais problemas objetivos.
-    if aprovado is False and aceitos and MAX_REESCRITAS_GUARDIAO > 0:
-        nova = _executar(lambda: montar_crew_reescrita(plano, autor, textos[autor], aceitos))
-        texto_novo = corrigir_mecanicamente(str(getattr(nova, "raw", "") or ""), Exigencias())
-        if texto_novo and len(encontrar_problemas(texto_novo, Exigencias())) <= len(
-            encontrar_problemas(textos[autor], Exigencias())
-        ):
-            textos[autor] = texto_novo
-            revisao["reescrito"] = True
-
-    textos = {a: cortar_frase_incompleta(remover_repeticoes(t)) for a, t in textos.items()}
-    if not any(t.strip() for t in textos.values()):
-        raise ErroSaidaInesperada("Os agentes devolveram respostas vazias.")
-
-    resposta = _montar_resposta(plano, textos, exemplo)
+    problemas_finais = problemas_textos(plano, textos)
+    bloqueada = decisao["veredito"] != "APROVADO" or bool(problemas_finais)
+    revisao = {**decisao, "reescrito": reescrito, "bloqueada": bloqueada,
+               "tentativas": tentativas, "validacao_automatica": problemas_finais,
+               "falha_correcao": falha_correcao}
+    resposta = recusas.resposta_nao_validada() if bloqueada else _montar_resposta(plano, textos, exemplo)
+    tipo = "orientacao" if bloqueada else "resposta"
     agente_ultimo = plano.agentes[-1]
     duracao = round(time.monotonic() - inicio, 2)
     memoria.salvar_turno(
         pergunta=pergunta, resposta=resposta, agente=agente_ultimo, intencao=intencao.tipo,
-        agentes=plano.agentes + ["guardiao"], tipo="resposta", revisao=revisao,
-        nivel=nivel, exemplo=exemplo, duracao_segundos=duracao,
+        agentes=plano.agentes + ["guardiao"], tipo=tipo, revisao=revisao,
+        nivel=nivel, exemplo=exemplo if not bloqueada else "", duracao_segundos=duracao,
     )
     return ResultadoFluxo(
         resposta=resposta, agente_ultimo=agente_ultimo, sessoes_atualizadas=True,
-        tipo="resposta", intencao=intencao.tipo, agentes=plano.agentes + ["guardiao"],
+        tipo=tipo, intencao=intencao.tipo, agentes=plano.agentes + ["guardiao"],
         revisao=revisao, duracao_segundos=duracao,
     )

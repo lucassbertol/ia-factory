@@ -5,7 +5,7 @@ esqueleto do Anexo B da especificação (ROLE, GOAL, BACKSTORY, ESCOPO,
 ESTRATÉGIA PEDAGÓGICA, EXEMPLOS, CASOS DE ERRO, REGRAS ANTI-ALUCINAÇÃO,
 FORMATO DAS RESPOSTAS). Este módulo separa ROLE, GOAL e BACKSTORY, que o
 CrewAI recebe em campos próprios; as demais seções vão junto com o backstory,
-seguidas da referência conceitual local.
+seguidas das seções conceituais locais selecionadas pela intenção do turno.
 """
 
 from __future__ import annotations

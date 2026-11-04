@@ -109,3 +109,12 @@ def fora_de_escopo() -> str:
         "Sobre o Factory Method, posso explicar o conceito, mostrar um exemplo em Java, "
         "comparar com padrões parecidos ou propor um exercício. O que prefere?"
     )
+
+
+def resposta_nao_validada() -> str:
+    """Saída segura sem expor os rascunhos reprovados ou inconclusivos."""
+    return (
+        "Não consegui validar uma resposta para essa pergunta. "
+        "Você pode reformular ou consultar o material da disciplina. "
+        "Qual ponto sobre Factory Method você gostaria de esclarecer primeiro?"
+    )
