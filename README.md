@@ -25,7 +25,7 @@ próximo passo. Detalhes: [arquitetura](docs/arquitetura.md), [agentes](docs/age
 - Python **3.12** (testado com 3.12.10 no Windows e 3.12.3 no Linux)
 - **Ollama** instalado e aberto: https://ollama.com/download
 - Modelo **qwen2.5:3b** (cerca de 2 GB); 8 GB de RAM bastam, 16 GB é o recomendado
-- JDK (opcional), só para o teste que compila os exemplos Java
+- JDK (opcional), para compilar manualmente os exemplos Java em `agente/referencias/`
 
 ## 2. Instalação
 
@@ -122,33 +122,22 @@ Tudo em `agente/config.py`, com valores que podem ser trocados por variáveis de
 A telemetria e o rastreamento do CrewAI são desligados em `agente/__init__.py`. O sistema roda
 sem internet depois de instalado; para conferir, desligue a rede e execute uma pergunta.
 
-## 5. Testes
+## 5. Coleta de respostas do roteiro
+
+Com o Ollama ativo e o modelo baixado:
 
 ```bash
-python -m unittest -v tests.test_unitarios      # 40 testes, sem o modelo real (~20 s)
-python tests/test_perguntas_pdf.py --extras     # roteiro + 6 casos-limite com o modelo real
+python tests/test_perguntas_pdf.py            # 8 perguntas do roteiro
+python tests/test_perguntas_pdf.py --extras   # roteiro + 6 casos-limite
 ```
 
-Os testes unitários usam um Ollama simulado (`tests/ollama_simulado.py`) e cobrem o
-roteamento (roteiro e 19 variações), as recusas, os guardrails, o veredito e a reescrita opcional do
-Guardião, as falhas do Ollama, a memória, os prompts, a CLI e a compilação dos exemplos Java.
-Eles **não** avaliam a qualidade das respostas do modelo: isso é feito lendo
-`evidencias/respostas_teste.json`, gerado pelo segundo comando, cujo campo `julgamento` fica
-para a dupla preencher.
+O coletor salva as respostas integrais em `evidencias/respostas_teste.json`, criando
+a pasta quando necessário. Uma nova execução substitui esse arquivo. Os resultados
+incluem intenção, agentes, revisão do Guardião e duração; o campo `julgamento`
+deve ser preenchido pela dupla após ler as respostas. A coleta não avalia
+automaticamente a correção pedagógica. Veja [instruções dos testes](tests/README.md).
 
-## 6. Caderno de evidências (avaliação dos outros sistemas)
-
-```bash
-# formulário em branco para a sessão em sala
-python caderno/avaliar_sistema.py --somente-formulario --padrao Strategy --dupla "Nome da dupla"
-# ou rodando o roteiro direto no projeto da outra dupla
-python caderno/avaliar_sistema.py --projeto "C:\caminho\do\projeto" --padrao Strategy --dupla "Nome da dupla"
-```
-
-Os formulários vão para `caderno/avaliacoes/`. Os critérios estão em
-[caderno/rubrica.md](caderno/rubrica.md).
-
-## 7. Estrutura
+## 6. Estrutura
 
 ```text
 agente/
@@ -166,13 +155,12 @@ agente/
   prompts/             prompt de sistema de cada agente (fonte única)
   referencias/         referência conceitual e exemplos .java
   web.py               interface web opcional
-tests/                 testes automáticos, simulador do Ollama, coleta do roteiro
-caderno/               avaliação entre pares (script e rubrica)
+tests/                 coletor das perguntas do roteiro e instruções de execução
 docs/                  arquitetura, agentes, memória, justificativa, mini-relatório
 frontend/              HTML/CSS/JS da interface web
 ```
 
-## 8. Solução de problemas
+## 7. Solução de problemas
 
 | Problema | Solução |
 |---|---|
@@ -182,11 +170,12 @@ frontend/              HTML/CSS/JS da interface web
 | Acentos estranhos no terminal do Windows | Use o Windows Terminal ou rode `chcp 65001` antes |
 | A primeira resposta demora muito | Normal: o modelo está sendo carregado na memória; as seguintes são mais rápidas |
 
-## 9. Entregáveis
+## 8. Arquivos de documentação
 
 1. Sistema: este repositório (`requirements.txt`, `README.md`, código em `agente/`)
 2. Documentação dos agentes: `docs/agentes.md` e seção 2 do relatório
 3. Justificativa de design: `docs/justificativa_design.md` e seção 3 do relatório
 4. Mini-relatório: `docs/mini_relatorio.md` e seção 4 do relatório
-5. Demonstração ao vivo: `python -m agente`
-6. Caderno de evidências: `caderno/avaliacoes/` (critérios em `caderno/rubrica.md`)
+5. Relatório de entrega: `docs/Relatorio_Entrega_FactoryMethod.docx`
+
+Os relatórios ainda possuem campos para a dupla completar antes da entrega.
