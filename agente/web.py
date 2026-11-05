@@ -16,6 +16,7 @@ from starlette.responses import JSONResponse
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
+from .agentes import TITULOS
 from .config import OLLAMA_MODEL, PADRAO_ENSINADO, ROOT_DIR
 from .erro import ErroEntradaVazia, ErroModeloIndisponivel, ErroSaidaInesperada
 from .memoria import MemoriaConversa
@@ -23,6 +24,17 @@ from .memoria import MemoriaConversa
 logger = logging.getLogger(__name__)
 # Uma chamada por vez evita concorrencia na crew/modelo local e na memoria.
 _ocupado = Lock()
+
+
+def autores_resposta(agente, agentes, intencao, revisao) -> list[str]:
+    if (revisao or {}).get("bloqueada") or agente == "regra_deterministica":
+        return ["Sistema"]
+    if intencao == "exercicio":
+        return ["Banco de exercícios"]
+    nomes = [TITULOS[nome] for nome in agentes or [] if nome in TITULOS and nome != "guardiao"]
+    if not nomes and agente in TITULOS and agente != "guardiao":
+        return [TITULOS[agente]]
+    return nomes
 
 
 def erro(mensagem: str, status: int) -> JSONResponse:
@@ -52,6 +64,9 @@ def responder(pergunta: str, sessao: str) -> JSONResponse:
         return JSONResponse({
             "resposta": resultado.resposta, "tipo": resultado.tipo, "sessao_id": sessao,
             "agentes": resultado.agentes, "duracao_segundos": resultado.duracao_segundos,
+            "autores": autores_resposta(
+                resultado.agente_ultimo, resultado.agentes, resultado.intencao, resultado.revisao,
+            ),
         })
     except ErroEntradaVazia as exc:
         return erro(exc.mensagem_usuario, 400)
@@ -100,6 +115,10 @@ async def historico(request):
         return erro("Identificador de conversa inválido.", 400)
     try:
         turnos = await run_in_threadpool(lambda: MemoriaConversa(sessao).historico)
+        for turno in turnos:
+            turno["autores"] = autores_resposta(
+                turno.get("agente"), turno.get("agentes"), turno.get("intencao"), turno.get("revisao"),
+            )
         return JSONResponse({"sessao_id": sessao, "turnos": turnos})
     except OSError:
         logger.exception("Falha ao ler historico web")

@@ -166,7 +166,11 @@
     return avatar;
   }
 
-  function mensagem(texto, usuario = false, falha = false) {
+  function formatarTempo(segundos) {
+    return `${segundos.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} s`;
+  }
+
+  function mensagem(texto, usuario = false, falha = false, autores = [], duracao) {
     const row = document.createElement("div");
     row.className = `msg ${usuario ? "msg-user" : "msg-ai"}${falha ? " msg-error" : ""}`;
     row.setAttribute("aria-label", usuario ? "Você" : "Factory IA");
@@ -184,6 +188,15 @@
     if (usuario || falha) bubble.textContent = texto;
     else renderizarResposta(bubble, texto);
     corpo.appendChild(bubble);
+    const nomes = Array.isArray(autores) ? autores.join(" e ") : "";
+    if (!usuario && !falha && (Number.isFinite(duracao) || nomes)) {
+      const rodape = document.createElement("div");
+      rodape.className = "response-time";
+      rodape.textContent = Number.isFinite(duracao)
+        ? `Respondido em ${formatarTempo(duracao)}${nomes ? ` por ${nomes}` : ""}`
+        : `Autoria: ${nomes}`;
+      corpo.appendChild(rodape);
+    }
     row.append(avatar, corpo);
     garantirThread().appendChild(row);
     rolar();
@@ -227,7 +240,6 @@
     status("A IA está respondendo. O modelo local pode levar alguns instantes.");
     indicador();
     const inicio = performance.now();
-    const formatarTempo = (segundos) => `${segundos.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} s`;
     const cronometro = setInterval(() => {
       const contador = $("thinkingTime");
       if (contador) contador.textContent = formatarTempo((performance.now() - inicio) / 1000);
@@ -239,11 +251,7 @@
       const duracao = (performance.now() - inicio) / 1000;
       tempoTotal += duracao;
       respostasConcluidas++;
-      const row = mensagem(dados.resposta);
-      const tempo = document.createElement("div");
-      tempo.className = "response-time";
-      tempo.textContent = `Respondido em ${formatarTempo(duracao)}`;
-      row.querySelector(".msg-body").appendChild(tempo);
+      mensagem(dados.resposta, false, false, dados.autores, duracao);
       status(`Última resposta: ${formatarTempo(duracao)} · Média nesta aba: ${formatarTempo(tempoTotal / respostasConcluidas)} (${respostasConcluidas})`);
     } catch (erro) {
       $("typingRow")?.remove();
@@ -304,7 +312,7 @@
       for (const turno of historico.turnos || []) {
         if (typeof turno.pergunta === "string" && typeof turno.resposta === "string") {
           mensagem(turno.pergunta, true);
-          mensagem(turno.resposta);
+          mensagem(turno.resposta, false, false, turno.autores, turno.duracao_segundos);
         }
       }
       status("Modelo local · As respostas podem conter imprecisões; confira o material da disciplina.");
