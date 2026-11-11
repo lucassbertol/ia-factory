@@ -2,13 +2,42 @@
 
 Trabalho de **ELC1070 — Análise e Projeto de Sistemas OO** (UFSM). O tutor usa quatro agentes do CrewAI e o modelo local `qwen2.5:3b` para ensinar Factory Method. A interface principal é o terminal. O projeto também oferece um chat no navegador.
 
-## 1. Instalar os pré-requisitos
+## 1. Instalar os pré-requisitos e baixar o projeto
 
-- **Python 3.12**. No Linux, a instalação precisa incluir o módulo `venv`.
-- **Ollama**. Siga o guia para [Linux](https://docs.ollama.com/linux) ou [Windows](https://docs.ollama.com/windows).
-- **Espaço em disco** para o Ollama, as dependências e o modelo de aproximadamente 2 GB. [Modelo qwen2.5:3b](https://ollama.com/library/qwen2.5:3b)
+A instalação inicial exige internet. Reserve espaço para o Ollama, as dependências do Python e o modelo de aproximadamente 2 GB. [Modelo qwen2.5:3b](https://ollama.com/library/qwen2.5:3b)
 
-Baixe ou clone o projeto, extraia o ZIP se for o caso e abra um terminal na pasta que contém este README e o `requirements.txt`. Execute os comandos do projeto a partir dessa pasta.
+### Linux (Ubuntu 24.04 e Linux Mint 22)
+
+No Bash, instale o Python 3.12 com suporte a ambientes virtuais, o Git para clonar o projeto e o curl para baixar o instalador do Ollama.
+
+```bash
+sudo apt update
+sudo apt install python3.12 python3.12-venv git curl
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+Em outras distribuições, instale o Python 3.12 com suporte a `venv` pelo gerenciador da distribuição. [Guia do Ollama para Linux](https://docs.ollama.com/linux)
+
+### Windows (PowerShell)
+
+```powershell
+winget install --exact --id Python.Python.3.12
+winget install --exact --id Git.Git
+winget install --exact --id Ollama.Ollama
+```
+
+Feche e reabra o PowerShell após a instalação para carregar os novos comandos. Se `winget` estiver indisponível, instale ou atualize o **Instalador de Aplicativo (App Installer)** pela Microsoft Store. [Guia do WinGet](https://learn.microsoft.com/windows/package-manager/winget/) · [Guia do Ollama para Windows](https://docs.ollama.com/windows)
+
+### Baixar o projeto (Linux e Windows)
+
+No terminal, entre na pasta onde deseja salvar o projeto e rode:
+
+```text
+git clone https://github.com/lucassbertol/ia-factory.git
+cd ia-factory
+```
+
+Se já recebeu o projeto em ZIP, extraia o arquivo e abra o terminal na pasta extraída que contém o `requirements.txt`. Use essa pasta para todos os comandos seguintes.
 
 ## 2. Preparar o ambiente
 
