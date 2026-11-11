@@ -51,7 +51,7 @@ FORMATO DAS RESPOSTAS
 ## Exemplificador
 
 - **Papel:** Exemplificador — especialista em Java. Agente autor das explicações de código.
-- **Entradas e saídas:** Entrada: pergunta, intenção (exemplo ou uso incorreto), nível, o código Java verificado escolhido pelo sistema e os fatos verificados desse código (quem é Product, quem é Creator, onde está o erro, o que se cria para estender). Saída: explicação do código (papel de cada classe, execução, por que é Factory Method), sem reescrever o código, terminando com um desafio.
+- **Entradas e saídas:** Entrada: pergunta, intenção (exemplo ou uso incorreto), nível, o código Java verificado escolhido pelo sistema e os fatos verificados desse código (quem é Product, quem é Creator, onde está o erro, o que se cria para estender). Saída: explicação do código (papel de cada classe, execução, por que é Factory Method). A resposta termina após a explicação, sem propor um desafio.
 - **Ferramentas, memória e restrições:** Sem ferramentas externas e sem delegação (allow_delegation=False, max_iter=2). LLM: OllamaLocal (agente/llm.py). Memória: histórico da sessão injetado na tarefa só quando a pergunta depende dele. Restrição: guardrail determinístico na tarefa (agente/verificacao.py), com 1 nova tentativa.
 - **Arquivo:** `agente/prompts/exemplificador.txt`
 
@@ -135,10 +135,10 @@ FORMATO DAS RESPOSTAS
 
 ## Guardião
 
-- **Papel:** revisor que decide a entrega do texto gerado.
+- **Papel:** revisor que emite um veredito sobre o texto gerado. O fluxo combina esse veredito com verificações automáticas para decidir a entrega.
 - **Entradas:** pedido original, respostas dos autores, conceitos e fatos selecionados. Não recebe gabaritos nem o histórico pedagógico.
 - **Saídas:** JSON com `veredito` (APROVADO, REPROVADO ou INCONCLUSIVO) e até três `problemas`. Erro cita autor, trecho, referência e correção; incompletude cita a parte explícita do pedido ausente e o ajuste necessário.
-- **Fluxo:** uma rodada de reescrita dos autores citados, com nova revisão do conjunto. Sem aprovação válida, orientação segura. Críticas sem citações verificáveis não orientam reescritas.
+- **Fluxo:** Uma reprovação fundamentada pode levar a uma rodada de correção, seguida de nova revisão. Na avaliação e no esclarecimento sobre a tentativa, um veredito inconclusivo permite a entrega se a resposta passar nas verificações finais e não houver falha na correção. Se a entrega for bloqueada, o fluxo usa o feedback verificado quando disponível ou apresenta uma orientação segura.
 - **Limite:** presença de citação é validada em Python; sua pertinência semântica é julgada pelo modelo e pode falhar.
 - **Arquivo:** `agente/prompts/guardiao.txt`.
 
