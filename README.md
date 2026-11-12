@@ -122,10 +122,6 @@ O coletor grava as respostas completas em `evidencias/respostas_teste.json` e su
 
 ## Documentação do projeto
 
-- [Arquitetura e fluxo de revisão](docs/arquitetura.md)
-- [Agentes e prompts](docs/agentes.md)
-- [Memória de conversa](docs/memoria.md)
-- [Justificativa de design](docs/justificativa_design.md)
-- [Mini-relatório](docs/mini_relatorio.md)
+- [Relatório final do projeto (PDF)](docs/Lucas_Bertol_Renato_Marquioro_Relatorio_Entrega_FactoryMethod.pdf)
 - [Referência didática com exemplos Java e exercícios](agente/referencias/factory_method.md)
 - [Configurações do modelo e do fluxo](agente/config.py)

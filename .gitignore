@@ -1,6 +1,9 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 
+# Arquivos temporários do LibreOffice
+.~lock.*#
+
 # Registros locais das execucoes antigas de testes.
 /evidencias/execucoes/
 

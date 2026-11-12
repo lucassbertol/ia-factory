@@ -131,8 +131,10 @@ def _contrato(plano: PlanoTurno, autor: str) -> str:
     if i == "selecao":
         return (
             "Responda quando usar e quando evitar o Factory Method, em no máximo 250 palavras. "
-            "(1) Uma situação concreta em que ele é a melhor escolha: há vários tipos de produto "
-            "e a lista deve crescer. (2) Uma situação em que deve ser evitado: existe UM ÚNICO "
+            "(1) Uma situação concreta em que ele é a melhor escolha: uma operação comum usa "
+            "produtos por um mesmo contrato. Explique por que faz sentido deixar cada subclasse "
+            "do criador escolher qual produto concreto fornecer. "
+            "(2) Uma situação em que deve ser evitado: existe UM ÚNICO "
             "tipo de produto e nenhuma variação prevista, então basta instanciar a classe "
             "diretamente, sem Creator nem subclasses. Justifique as duas com um domínio de exemplo seu, sem usar as "
             "classes dos exemplos da referência (Notificador, Email, Sms, Relatorio). "
